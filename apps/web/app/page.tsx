@@ -102,17 +102,71 @@
 //   );
 // }
 
-import Image from "next/image";
+// import Image from "next/image";
+
+// export default function Home() {
+//   return (
+//     <main className="flex min-h-screen flex-col items-center justify-center p-24">
+//       <h1 className="text-4xl font-bold mb-8">Codeless — Welcome!</h1>
+//       <p className="text-xl">Monorepo setup complete. Ready for real UI.</p>
+//       {/* Temporary button until shadcn/ui */}
+//       <button className="mt-8 bg-blue-600 text-white px-6 py-3 rounded-lg">
+//         Let's Build
+//       </button>
+//     </main>
+//   );
+// }
+
+'use client'; // This makes it a Client Component (needed for interactive auth UI)
+
+import { useEffect, useState } from 'react';
+import { supabaseBrowser } from '../lib/supabase';
+import { Auth } from '@supabase/auth-ui-react';
+import { ThemeSupa } from '@supabase/auth-ui-shared';
 
 export default function Home() {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Check current session on load
+    supabaseBrowser.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    // Listen for auth changes (login/logout)
+    const { data: listener } = supabaseBrowser.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  if (user) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center p-24">
+        <h1 className="text-4xl font-bold mb-8">Welcome, {user.email}!</h1>
+        <button
+          onClick={() => supabaseBrowser.auth.signOut()}
+          className="bg-red-600 text-white px-6 py-3 rounded-lg"
+        >
+          Sign Out
+        </button>
+      </main>
+    );
+  }
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold mb-8">Codeless — Welcome!</h1>
-      <p className="text-xl">Monorepo setup complete. Ready for real UI.</p>
-      {/* Temporary button until shadcn/ui */}
-      <button className="mt-8 bg-blue-600 text-white px-6 py-3 rounded-lg">
-        Let's Build
-      </button>
+      <h1 className="text-4xl font-bold mb-8">Codeless Auth</h1>
+      <div className="w-full max-w-md">
+        <Auth
+          supabaseClient={supabaseBrowser}
+          appearance={{ theme: ThemeSupa }}
+          theme="dark"
+          providers={[]}
+          redirectTo="http://localhost:3000"  // Ensures smooth redirect after actions
+        />
+      </div>
     </main>
   );
 }
