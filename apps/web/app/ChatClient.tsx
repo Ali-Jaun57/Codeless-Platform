@@ -11,10 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { CodeBlock } from '@/components/ui/code-block';
 
-// type Message = {
-//   role: "user" | "assistant";
-//   content: string;
-// };
+
 
 type Message = {
   role: "user" | "assistant";
@@ -41,92 +38,6 @@ export default function ChatClient({ initialUser }: Props) {
     return () => listener.subscription.unsubscribe();
   });
 
-  // const sendMessage = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   if (!input.trim() || loading) return;
-
-  //   const userMessage = { role: "user" as const, content: input };
-  //   setMessages((prev) => [...prev, userMessage]);
-  //   setInput("");
-  //   setLoading(true);
-
-  //   try {
-  //     const res = await fetch("http://localhost:8000/generate-project", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ prompt: input }),
-  //     });
-
-  //     if (!res.ok) {
-  //       const err = await res.text();
-  //       throw new Error(err || "API error");
-  //     }
-
-  //     const data = await res.json();
-  //     setMessages((prev) => [...prev, { role: "assistant" as const, content: `\`\`\`${data.language}\n${data.code}\n\`\`\`` }]);
-  //   } catch (err: any) {
-  //     setMessages((prev) => [...prev, { role: "assistant" as const, content: `Error: ${err.message || "Failed to generate code"}` }]);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  //   const sendMessage = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   if (!input.trim() || loading) return;
-
-  //   const userMessage = { role: "user" as const, content: input };
-  //   setMessages((prev) => [...prev, userMessage]);
-  //   setInput("");
-  //   setLoading(true);
-
-  //   try {
-  //     const res = await fetch("http://localhost:8000/generate-project", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ prompt: input }),
-  //     });
-
-  //     if (!res.ok) {
-  //       const err = await res.text();
-  //       throw new Error(err || "API error");
-  //     }
-
-  //     const data = await res.json();  // { files: [{ path: "...", content: "..." }, ...] }
-
-  //     if (!data.files || data.files.length === 0) {
-  //       throw new Error("No files generated");
-  //     }
-
-  //     // Render as tabs (path as tab title)
-  //     const multiFileContent = (
-  //       <Tabs defaultValue={data.files[0].path} className="w-full mt-4">
-  //         <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${data.files.length}, 1fr)` }}>
-  //           {data.files.map((file: any) => (
-  //             <TabsTrigger key={file.path} value={file.path}>
-  //               {file.path.split('/').pop() || file.path}  // File name as title
-  //             </TabsTrigger>
-  //           ))}
-  //         </TabsList>
-  //         {data.files.map((file: any) => (
-  //           <TabsContent key={file.path} value={file.path}>
-  //             <CodeBlock
-  //               code={file.content}
-  //               language={file.path.split('.').pop() || "text"}  // Detect language from extension
-  //             />
-  //           </TabsContent>
-  //         ))}
-  //       </Tabs>
-  //     );
-
-  //     setMessages((prev) => [...prev, { role: "assistant" as const, content: multiFileContent }]);
-  //   } catch (err: any) {
-  //     console.error(err);
-  //     setMessages((prev) => [...prev, { role: "assistant" as const, content: `Error generating project: ${err.message || "Failed"}. Check backend console.` }]);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   const sendMessage = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -205,43 +116,7 @@ export default function ChatClient({ initialUser }: Props) {
 
       <ScrollArea className="flex-1 p-4">
         <div className="mx-auto max-w-4xl space-y-4">
-          {/* {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={cn(
-                "flex items-end gap-3 my-4",
-                msg.role === "user" ? "justify-end" : "justify-start"
-              )}
-            >
-              
-              {msg.role === "assistant" && (
-  <div className="w-full">
-    {typeof msg.content === 'string' ? (
-      <div className="max-w-lg rounded-lg px-4 py-2 bg-muted">
-        {msg.content}
-      </div>
-    ) : (
-      msg.content  // JSX tabs for multi-file
-    )}
-  </div>
-)}
-              <div  
-                className={cn(
-                  "max-w-md rounded-2xl px-4 py-3 shadow-md",
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-br-none"
-                    : "bg-muted text-foreground rounded-bl-none"
-                )}
-              >
-                {msg.content}
-              </div>
-              {msg.role === "user" && (
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-secondary text-secondary-foreground">U</AvatarFallback>
-                </Avatar>
-              )}
-            </div>
-          ))} */}
+          
 {messages.map((msg, i) => (
   <div
     key={i}
