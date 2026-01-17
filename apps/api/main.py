@@ -437,11 +437,13 @@ def planner(state: AgentState):
     print("🔵 STARTING PLANNER with RAG (REST retrieve)")
     
     # Retrieve similar previous projects (simple prompt search)
+    # Broader retrieval: last 5 projects (recent memory)
     try:
-        response = supabase.table("projects").select("prompt, files").ilike("prompt", f"%{state.messages[-1].content[:30]}%").limit(3).execute()
-        context = "Previous similar projects found:\n"
+        response = supabase.table("projects").select("prompt, files").order("created_at", desc=True).limit(5).execute()
+        context = "Previous projects (most recent):\n"
         for row in response.data:
-            context += f"- Prompt: {row['prompt']}\n  Files: {list(f['path'] for f in row['files'][:3])}\n"
+            file_names = [f["path"] for f in row["files"][:3]]  # Sample first 3 files
+            context += f"- Prompt: {row['prompt']}\n  Files: {file_names}\n\n"
     except Exception as e:
         print("RAG retrieve error:", str(e))
         context = "No previous projects found."
