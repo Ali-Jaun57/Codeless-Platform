@@ -1,6 +1,6 @@
 
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
@@ -12,6 +12,9 @@ import os
 import json
 import asyncio
 from github import Github
+import io
+
+
 
 load_dotenv()
 
@@ -413,7 +416,7 @@ async def export_project(request: ExportRequest):
   except Exception as e:
     print("Export error:", str(e))
     raise HTTPException(status_code=500, detail=str(e))
-
+    
 @app.get("/health")
 async def health():
     return {"status": "ok"}
