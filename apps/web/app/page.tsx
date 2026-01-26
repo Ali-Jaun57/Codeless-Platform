@@ -1,44 +1,45 @@
+
+// frontend/app/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { supabaseBrowser } from '@/lib/supabase';
-import { Auth } from '@supabase/auth-ui-react';
-import { ThemeSupa } from '@supabase/auth-ui-shared';
-import ChatClient from './ChatClient';
+import ClientAuth from './components/ClientAuth/ClientAuth';
+import ChatClient from './components/ChatClient/ChatClient';
 
-export default function Home() {
+export default function HomePage() {
   const [user, setUser] = useState<any>(null);
-
+  const [loading, setLoading] = useState(true);
+  
   useEffect(() => {
-    // Initial session check
+    // Check initial session
     supabaseBrowser.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      setLoading(false);
     });
-
-    // Listener for auth changes (login → auto to chat)
-    const { data: listener } = supabaseBrowser.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
+    
+    // Listen for auth changes
+    const { data: listener } = supabaseBrowser.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
+    
     return () => listener.subscription.unsubscribe();
   }, []);
-
-  if (!user) {
+  
+  if (loading) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-background">
-        <h1 className="text-4xl font-bold mb-8">Codeless Auth</h1>
-        <div className="w-full max-w-md">
-          <Auth
-            supabaseClient={supabaseBrowser}
-            appearance={{ theme: ThemeSupa }}
-            theme="dark"
-            providers={[]}
-            redirectTo="http://localhost:3000"
-          />
-        </div>
-      </main>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-lg">Loading...</div>
+      </div>
     );
   }
-
+  
+  if (!user) {
+    return <ClientAuth />;
+  }
+  
   return <ChatClient initialUser={user} />;
 }

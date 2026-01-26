@@ -34,6 +34,7 @@ class Critic:
             # Get LLM response
             logger.debug("Calling LLM for critique...")
             response = self.llm.invoke(state.messages + [HumanMessage(content=prompt)])
+            logger.debug(f"Raw LLM Critique response: {response.content}")
             logger.success("✅ LLM critique response received")
             
             # Parse response

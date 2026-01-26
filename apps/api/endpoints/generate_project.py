@@ -3,41 +3,87 @@ import json
 import asyncio
 from fastapi import HTTPException
 from langchain_core.messages import HumanMessage
-from openai import OpenAI
+
 from config import Config
 from supabase_client import supabase
-from workflows.code_generation import workflow
+
 from utils.logger import Logger
+
+from workflows.main_workflow import main_workflow
 
 logger = Logger(__name__)
 
 class GenerateProjectHandler:
     def __init__(self):
-        self.openai_client = OpenAI(api_key=Config.OPENAI_API_KEY)
+        
         logger.step("Generate Project Handler", "initialized")
     
+
     async def handle(self, prompt: str):
-        """Handle project generation request"""
+        """Handle project generation request with classification"""
         logger.step("Project Generation", f"started for prompt: {prompt[:50]}...")
         
         try:
-            # Prepare inputs for workflow
+            # Prepare inputs for ENHANCED workflow
             inputs = {
                 "messages": [HumanMessage(content=prompt)],
                 "files": [],
                 "iteration": 0,
+                "max_iterations": Config.MAX_ITERATIONS,
                 "approved": False,
-                "max_iterations": Config.MAX_ITERATIONS
+                "detected_class": None,
+                "confidence": None,
+                "needs_clarification": False,
+                "clarification_question": None,
+                "app_requirements": None
             }
             
-            logger.debug(f"Starting workflow with timeout: {Config.WORKFLOW_TIMEOUT}s")
+            logger.debug(f"Starting ENHANCED workflow with timeout: {Config.WORKFLOW_TIMEOUT}s")
             
-            # Execute workflow with timeout
+            # Execute ENHANCED workflow with timeout
             result = await asyncio.wait_for(
-                asyncio.to_thread(workflow.invoke, inputs),
+                asyncio.to_thread(main_workflow.invoke, inputs),
                 timeout=Config.WORKFLOW_TIMEOUT
             )
             
+            # Get classification info
+            detected_class = result.get("detected_class")
+            needs_clarification = result.get("needs_clarification", False)
+            clarification_question = result.get("clarification_question", "")
+            app_requirements = result.get("app_requirements", "")
+            
+            logger.info(f"📊 Classification: {detected_class}")
+            logger.info(f"   Needs clarification: {needs_clarification}")
+            
+            # Handle clarification needed
+            if needs_clarification:
+                logger.info(f"   Clarification question: {clarification_question}")
+                return {
+                    "type": "clarification_needed",
+                    "message": clarification_question,
+                    "detected_class": detected_class,
+                    "confidence": result.get("confidence")
+                }
+            
+            # Handle no class matched
+            if detected_class == "Unable to determine":
+                logger.info(f"   No class matched: {app_requirements}")
+                return {
+                    "type": "no_class_matched",
+                    "message": f"Unable to determine app class. {app_requirements}",
+                    "app_requirements": app_requirements
+                }
+            
+            # Handle unsupported classes (Class B, C, D, E, F, G)
+            if detected_class and detected_class != "Class A":
+                logger.info(f"   Unsupported class: {detected_class}")
+                return {
+                    "type": "unsupported_class",
+                    "message": f"{detected_class} is not currently supported. Only Class A (frontend-only apps) are available at this time.",
+                    "detected_class": detected_class
+                }
+            
+            # Handle successful classification (Class A - return files)
             files = result.get("files", [])
             logger.success(f"✅ Workflow completed: {len(files)} files generated")
             logger.info(f"Final approved: {result.get('approved', False)}")
@@ -46,12 +92,11 @@ class GenerateProjectHandler:
             # Save to Supabase
             self._save_to_supabase(prompt, files)
             
-            # Handle empty result with fallback
-            if not files:
-                logger.warning("⚠️ Workflow returned empty files, using fallback...")
-                files = await self._fallback_generation(prompt)
-            
-            return {"files": files}
+            return {
+                "type": "success",
+                "files": files,
+                "detected_class": detected_class
+            }
             
         except asyncio.TimeoutError:
             logger.error("⏰ Workflow timeout")
@@ -65,7 +110,7 @@ class GenerateProjectHandler:
             import traceback
             traceback.print_exc()
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     def _save_to_supabase(self, prompt: str, files: list):
         """Save generated project to Supabase"""
         try:
@@ -76,30 +121,20 @@ class GenerateProjectHandler:
                 logger.warning("⚠️ Failed to save project to Supabase")
         except Exception as e:
             logger.error(f"❌ Save error: {str(e)}")
-    
-    async def _fallback_generation(self, prompt: str) -> list:
-        """Fallback generation using direct OpenAI API"""
-        logger.step("Fallback Generation", "started")
+
+    async def handle_with_clarification(self, original_prompt: str, clarification_answer: str, detected_class: str):
+        """Handle a prompt with clarification answer"""
+        logger.step("Clarified Project Generation", f"original: {original_prompt[:30]}..., answer: {clarification_answer[:30]}...")
         
-        try:
-            response = self.openai_client.chat.completions.create(
-                model=Config.OPENAI_MODEL,
-                messages=[
-                    {"role": "system", "content": "Generate a complete project as JSON: {\"files\": [{\"path\": \"file.js\", \"content\": \"code\"}]}"},
-                    {"role": "user", "content": prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.5
-            )
-            
-            data = json.loads(response.choices[0].message.content)
-            files = data.get("files", [])
-            logger.success(f"✅ Fallback generated {len(files)} files")
-            return files
-            
-        except Exception as e:
-            logger.error(f"❌ Fallback generation failed: {str(e)}")
-            return []
+        # Combine original prompt with clarification
+        combined_prompt = f"Original request: {original_prompt}. Clarification answer: {clarification_answer}. This is a {detected_class} app."
+        
+        # Now process with the combined context
+        return await self.handle(combined_prompt)
+    
+    
 
 # Handler instance
 handler = GenerateProjectHandler()
+
+

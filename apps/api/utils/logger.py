@@ -1,4 +1,4 @@
-# backend/utils/logger.py
+
 import sys
 from datetime import datetime
 from typing import Any
@@ -16,7 +16,7 @@ class Logger:
         }
     
     def _log(self, level: str, message: str, *args: Any):
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         color = self.colors.get(level, self.colors['reset'])
         
         formatted_message = f"{color}[{timestamp}] [{level.upper()}] [{self.name}]: {message}{self.colors['reset']}"
@@ -45,3 +45,57 @@ class Logger:
         """Special method for workflow steps"""
         emoji = "🟢" if status == "started" else "✅" if status == "completed" else "⚠️"
         self.info(f"{emoji} {step_name} - {status.upper()}")
+    
+    # NEW: Classification-specific logging methods
+    def classify(self, prompt: str, result: dict):
+        """Log classification results"""
+        class_name = result.get("class", "Unknown")
+        confidence = result.get("confidence", "Unknown")
+        needs_clarification = result.get("needs_clarification", False)
+        
+        self.info(f"📊 CLASSIFICATION: '{prompt[:50]}...'")
+        self.info(f"   Class: {class_name}")
+        self.info(f"   Confidence: {confidence}")
+        self.info(f"   Needs clarification: {needs_clarification}")
+        
+        if needs_clarification:
+            question = result.get("clarification_question", "")
+            self.info(f"   Clarification question: {question}")
+        
+        if class_name == "Unable to determine":
+            requirements = result.get("app_requirements", "")
+            self.warning(f"   No class matched: {requirements}")
+    
+    def route(self, detected_class: str, action: str):
+        """Log routing decisions"""
+        emoji = "✅" if action == "route" else "❌" if action == "reject" else "🔄"
+        self.info(f"{emoji} ROUTING: {detected_class} -> {action}")
+    
+    def workflow_start(self, workflow_type: str, prompt: str):
+        """Log workflow start"""
+        self.info(f"🚀 WORKFLOW START: {workflow_type}")
+        self.debug(f"   Prompt: {prompt[:100]}...")
+    
+    def workflow_end(self, workflow_type: str, result: dict):
+        """Log workflow completion"""
+        files_count = len(result.get("files", []))
+        iterations = result.get("iteration", 0)
+        approved = result.get("approved", False)
+        
+        self.success(f"🏁 WORKFLOW END: {workflow_type}")
+        self.info(f"   Files generated: {files_count}")
+        self.info(f"   Iterations: {iterations}")
+        self.info(f"   Approved: {approved}")
+    
+    def performance(self, operation: str, duration_ms: float):
+        """Log performance metrics"""
+        if duration_ms > 1000:
+            self.warning(f"⏱️ PERFORMANCE: {operation} took {duration_ms:.0f}ms (SLOW)")
+        else:
+            self.debug(f"⏱️ PERFORMANCE: {operation} took {duration_ms:.0f}ms")
+    
+    def validation(self, component: str, status: bool, message: str = ""):
+        """Log validation results"""
+        emoji = "✅" if status else "❌"
+        level = "info" if status else "warning"
+        self._log(level, f"{emoji} VALIDATION: {component} - {'PASS' if status else 'FAIL'} {message}")

@@ -2,6 +2,10 @@
 from supabase import create_client
 from config import Config
 from utils.logger import Logger
+from dotenv import load_dotenv
+
+load_dotenv
+
 
 logger = Logger(__name__)
 

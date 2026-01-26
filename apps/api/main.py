@@ -2,8 +2,9 @@
 # backend/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from httpx import request
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 # In main.py, use:
 from config import Config
@@ -33,9 +34,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Request models
+
+
 class GenerateRequest(BaseModel):
     prompt: str
+    clarification: Optional[str] = None
+    detected_class: Optional[str] = None
 
 class ExportRequest(BaseModel):
     repo_name: str
@@ -45,7 +49,16 @@ class ExportRequest(BaseModel):
 @app.get("/health")
 async def health():
     logger.debug("Health check requested")
-    return {"status": "ok", "service": "codeless-api"}
+    if request.clarification:
+        logger.info(f"   With clarification: {request.clarification[:50]}...")
+        logger.info(f"   Detected class: {request.detected_class}")
+        # Combine prompt and clarification
+        combined_prompt = f"{request.prompt} [Clarification: {request.clarification}]"
+        return await generate_handler.handle(combined_prompt)
+    else:
+        return await generate_handler.handle(request.prompt)
+    
+    return await {"status": "ok", "service": "codeless-api"}
 
 # Project generation endpoint
 @app.post("/generate-project")

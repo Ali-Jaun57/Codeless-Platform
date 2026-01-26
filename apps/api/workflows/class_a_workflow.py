@@ -1,13 +1,14 @@
-# backend/workflows/code_generation.py
+
+
 from langgraph.graph import StateGraph, END
 from langchain_openai import ChatOpenAI
 from agents.agent_state import AgentState
 from agents.planner import Planner
 from agents.coder import Coder
 from agents.critic import Critic
+from agents.classifier import Classifier
 from utils.logger import Logger
 from config import Config
-
 
 logger = Logger(__name__)
 
@@ -24,6 +25,7 @@ class CodeGenerationWorkflow:
         )
         
         # Initialize agents
+        # self.classifier = Classifier(self.llm)
         self.planner = Planner(self.llm)
         self.coder = Coder(self.llm)
         self.critic = Critic(self.llm)
@@ -33,35 +35,38 @@ class CodeGenerationWorkflow:
         logger.success("✅ Code Generation Workflow initialized")
     
     def _build_workflow(self):
-        """Build and compile the LangGraph workflow"""
-        logger.debug("Building workflow graph...")
+        """Build and compile the LangGraph workflow with classifier"""
+        logger.debug("Building workflow graph with classifier...")
         
         workflow = StateGraph(AgentState)
         
         # Add nodes
+        # workflow.add_node("classifier", self.classifier)
         workflow.add_node("planner", self.planner)
         workflow.add_node("coder", self.coder)
         workflow.add_node("critic", self.critic)
         
-        # Set entry point
+        # Set entry point to classifier
         workflow.set_entry_point("planner")
         
-        # Add edges
+      
+        
         workflow.add_edge("planner", "coder")
         workflow.add_edge("coder", "critic")
-        
-        # Add conditional edge
+
         workflow.add_conditional_edges(
             "critic",
             self._should_continue,
             {END: END, "coder": "coder"}
         )
         
+        
         # Compile graph
         compiled_graph = workflow.compile()
         logger.success("✅ Workflow graph compiled successfully")
         
         return compiled_graph
+    
     
     def _should_continue(self, state: AgentState):
         """Determine if workflow should continue"""
@@ -99,7 +104,12 @@ class CodeGenerationWorkflow:
         try:
             result = self.graph.invoke(inputs)
             logger.step("Workflow Execution", "completed")
-            logger.info(f"Result: {len(result.get('files', []))} files generated")
+            
+            # Log classification result
+            if result.get("detected_class"):
+                logger.info(f"📊 Final classification: {result.get('detected_class')}")
+            
+            logger.info(f"📁 Generated files: {len(result.get('files', []))}")
             return result
             
         except Exception as e:
