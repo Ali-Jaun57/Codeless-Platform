@@ -1,5 +1,6 @@
 # backend/config.py
 import os
+from venv import logger
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,6 +21,7 @@ class Config:
     # App Settings
     MAX_ITERATIONS = int(os.getenv("MAX_ITERATIONS", "3"))
     WORKFLOW_TIMEOUT = int(os.getenv("WORKFLOW_TIMEOUT", "180"))
+    
     
     @classmethod
     def validate(cls):

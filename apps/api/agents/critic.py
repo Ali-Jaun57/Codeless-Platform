@@ -1,4 +1,4 @@
-# backend/agents/critic.py
+# api/agents/critic.py
 import json
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage

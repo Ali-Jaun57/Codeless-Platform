@@ -1,18 +1,13 @@
 
-
-
-
-// frontend/app/components/ChatClient/ChatClient.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MessageBubble from './MessageBubble';
-import CodeTabs from '../CodeDisplay/CodeTabs';
+import VSCodeDisplay from '../CodeDisplay/VSCodeDisplay';
 import './ChatClient.css';
 
 type Message = {
@@ -34,6 +29,8 @@ export default function ChatClient({ initialUser }: ChatClientProps) {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [generatedFiles, setGeneratedFiles] = useState<any[]>([]);
+  const [showCodePanel, setShowCodePanel] = useState(false);
   
   // Conversation context for handling clarifications
   const [conversationContext, setConversationContext] = useState<{
@@ -120,19 +117,19 @@ export default function ChatClient({ initialUser }: ChatClientProps) {
       
       // Handle response
       if (data.type === 'success' && data.files && Array.isArray(data.files) && data.files.length > 0) {
-        const multiFileContent = (
+        setGeneratedFiles(data.files);
+        setShowCodePanel(true);
+        
+        const successContent = (
           <div>
             <p className="mb-2">✅ Detected as: <strong>{data.detected_class}</strong></p>
-            <CodeTabs 
-              files={data.files} 
-              onExport={exportToGitHub}
-            />
+            <p>Project generated successfully! Check the code panel on the right.</p>
           </div>
         );
         
         setMessages(prev => [
           ...prev, 
-          { role: 'assistant', content: multiFileContent }
+          { role: 'assistant', content: successContent }
         ]);
       }
       else if (data.type === 'unsupported_class') {
@@ -262,20 +259,21 @@ export default function ChatClient({ initialUser }: ChatClientProps) {
         ]);
       }
       else if (data.type === 'success' && data.files && Array.isArray(data.files) && data.files.length > 0) {
-        // Show generated files
-        const multiFileContent = (
+        // Set generated files and show code panel
+        setGeneratedFiles(data.files);
+        setShowCodePanel(true);
+        
+        // Show success message
+        const successContent = (
           <div>
             <p className="mb-2">✅ Detected as: <strong>{data.detected_class}</strong></p>
-            <CodeTabs 
-              files={data.files} 
-              onExport={exportToGitHub}
-            />
+            <p>Project generated successfully! Check the code panel on the right.</p>
           </div>
         );
         
         setMessages(prev => [
           ...prev, 
-          { role: 'assistant', content: multiFileContent }
+          { role: 'assistant', content: successContent }
         ]);
       }
       else if (data.type === 'unsupported_class') {
@@ -305,6 +303,11 @@ export default function ChatClient({ initialUser }: ChatClientProps) {
     }
   };
   
+  const closeCodePanel = () => {
+    setShowCodePanel(false);
+    setGeneratedFiles([]);
+  };
+  
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -314,70 +317,84 @@ export default function ChatClient({ initialUser }: ChatClientProps) {
   }
   
   return (
-    <div className="chat-container">
-      <header className="chat-header">
-        <div className="chat-header-content">
-          <h1 className="text-2xl font-bold">Codeless Chat</h1>
-          <Button 
-            variant="outline" 
-            onClick={() => supabaseBrowser.auth.signOut()}
-          >
-            Sign Out ({user.email})
-          </Button>
-        </div>
-      </header>
-      
-      <ScrollArea className="chat-messages">
-        <div className="chat-messages-container">
-          {messages.map((msg, index) => (
-            <MessageBubble
-              key={index}
-              role={msg.role}
-              content={msg.content}
+    <div className={`chat-container ${showCodePanel ? 'split-screen' : ''}`}>
+      {/* Chat Panel (Left) */}
+      <div className="chat-panel">
+        <header className="chat-header">
+          <div className="chat-header-content">
+            <h1>Codeless</h1>
+            <Button 
+              variant="outline" 
+              onClick={() => supabaseBrowser.auth.signOut()}
+              className="sign-out-btn"
+            >
+              Sign Out
+            </Button>
+          </div>
+        </header>
+        
+        <ScrollArea className="chat-messages">
+          <div className="chat-messages-container">
+            {messages.map((msg, index) => (
+              <MessageBubble
+                key={index}
+                role={msg.role}
+                content={msg.content}
+              />
+            ))}
+            
+            {loading && (
+              <div className="loading-indicator">
+                {conversationContext.pendingClarification 
+                  ? 'Processing your clarification...' 
+                  : 'Generating your project...'}
+              </div>
+            )}
+            
+            {conversationContext.pendingClarification && !loading && (
+              <div className="clarification-reminder">
+                <p className="text-sm">
+                  ⚠️ Awaiting clarification: <strong>{conversationContext.pendingClarification.question}</strong>
+                </p>
+                <p className="text-xs mt-1">
+                  Type your answer above and press Send
+                </p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+        
+        <div className="chat-input">
+          <form onSubmit={sendMessage} className="chat-input-form">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={
+                conversationContext.pendingClarification
+                  ? `Answer: ${conversationContext.pendingClarification.question}`
+                  : 'Describe your app or feature...'
+              }
+              disabled={loading}
+              className="flex-1"
             />
-          ))}
-          
-          {loading && (
-            <div className="loading-indicator">
-              {conversationContext.pendingClarification 
-                ? 'Processing your clarification...' 
-                : 'Generating your project...'}
-            </div>
-          )}
-          
-          {conversationContext.pendingClarification && !loading && (
-            <div className="clarification-reminder p-3 bg-yellow-50 border border-yellow-200 rounded-lg my-4 mx-4">
-              <p className="text-sm text-yellow-800">
-                ⚠️ Awaiting clarification: <strong>{conversationContext.pendingClarification.question}</strong>
-              </p>
-              <p className="text-xs text-yellow-600 mt-1">
-                Type your answer above and press Send
-              </p>
-            </div>
-          )}
+            <Button type="submit" disabled={loading}>
+              {loading 
+                ? (conversationContext.pendingClarification ? 'Processing...' : 'Generating...')
+                : 'Send'}
+            </Button>
+          </form>
         </div>
-      </ScrollArea>
-      
-      <div className="chat-input">
-        <form onSubmit={sendMessage} className="chat-input-form">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={
-              conversationContext.pendingClarification
-                ? `Answer: ${conversationContext.pendingClarification.question}`
-                : 'Describe your app or feature...'
-            }
-            disabled={loading}
-            className="flex-1"
-          />
-          <Button type="submit" disabled={loading}>
-            {loading 
-              ? (conversationContext.pendingClarification ? 'Processing...' : 'Generating...')
-              : 'Send'}
-          </Button>
-        </form>
       </div>
+      
+      {/* Code Panel (Right) - VS Code-like display */}
+      {showCodePanel && generatedFiles.length > 0 && (
+        <VSCodeDisplay
+          files={generatedFiles}
+          onExport={exportToGitHub}
+          onClose={closeCodePanel}
+          isFullScreen={false}
+        />
+      )}
     </div>
   );
 }

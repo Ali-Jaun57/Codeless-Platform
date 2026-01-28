@@ -1,4 +1,4 @@
-// frontend/app/components/CodeDisplay/CodeBlock.tsx
+
 'use client';
 
 import { useState } from 'react';
@@ -27,14 +27,21 @@ export default function CodeBlock({
   };
   
   return (
-    <div className="relative rounded-lg overflow-hidden border">
-      <div className="flex justify-between items-center bg-gray-800 text-gray-200 px-4 py-2">
-        <span className="text-sm font-mono">{language}</span>
+    <div className="relative h-full overflow-hidden">
+      <div className="flex justify-between items-center bg-[#1a2236] text-[#cbd5e1] px-3 py-2 border-b border-[#334155]">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#ef4444]"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-[#10b981]"></div>
+          </div>
+          <span className="text-xs font-mono font-medium">{language.toUpperCase()}</span>
+        </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={handleCopy}
-          className="h-7 px-2 text-xs"
+          className="h-6 px-2 text-xs bg-[#1e293b] hover:bg-[#334155] text-[#cbd5e1] border border-[#334155] rounded"
         >
           {copied ? (
             <>
@@ -50,24 +57,38 @@ export default function CodeBlock({
         </Button>
       </div>
       
-      <SyntaxHighlighter
-        language={language}
-        style={vscDarkPlus}
-        showLineNumbers={showLineNumbers}
-        customStyle={{
-          margin: 0,
-          padding: '1rem',
-          fontSize: '0.875rem',
-          overflowX: 'auto',
-          backgroundColor: '#1e1e1e'
-        }}
-        lineNumberStyle={{
-          color: '#6b7280',
-          minWidth: '3em'
-        }}
-      >
-        {code}
-      </SyntaxHighlighter>
+      <div className="h-[calc(100%-40px)] overflow-auto custom-scrollbar">
+        <SyntaxHighlighter
+          language={language}
+          style={vscDarkPlus}
+          showLineNumbers={showLineNumbers}
+          customStyle={{
+            margin: 0,
+            padding: '12px',
+            fontSize: '12px',
+            backgroundColor: '#0f172a',
+            height: '100%',
+            minHeight: '100%',
+            fontFamily: '"Fira Code", "Consolas", "Monaco", "Andale Mono", "Ubuntu Mono", monospace',
+            lineHeight: '1.4'
+          }}
+          lineNumberStyle={{
+            color: '#64748b',
+            minWidth: '2.5em',
+            textAlign: 'right',
+            paddingRight: '1em',
+            borderRight: '1px solid #334155'
+          }}
+          lineProps={{
+            style: {
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word'
+            }
+          }}
+        >
+          {code}
+        </SyntaxHighlighter>
+      </div>
     </div>
   );
 }

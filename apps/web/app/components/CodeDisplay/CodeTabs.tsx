@@ -1,4 +1,5 @@
-// frontend/app/components/CodeDisplay/CodeTabs.tsx
+
+
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,15 +12,11 @@ interface CodeTabsProps {
     content: string;
   }>;
   onExport?: (files: any[]) => void;
-  onTest?: (files: any[]) => void;
-  onDeploy?: (files: any[]) => void;
 }
 
 export default function CodeTabs({ 
   files, 
-  onExport, 
-  onTest, 
-  onDeploy 
+  onExport 
 }: CodeTabsProps) {
   const defaultTab = files[0]?.path || "0";
   
@@ -42,16 +39,6 @@ export default function CodeTabs({
             {onExport && (
               <Button onClick={() => onExport(files)} size="sm">
                 Export to GitHub
-              </Button>
-            )}
-            {onTest && (
-              <Button onClick={() => onTest(files)} size="sm" variant="outline">
-                Run Tests
-              </Button>
-            )}
-            {onDeploy && (
-              <Button onClick={() => onDeploy(files)} size="sm" variant="secondary">
-                Deploy
               </Button>
             )}
           </div>

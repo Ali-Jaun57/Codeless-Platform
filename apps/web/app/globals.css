@@ -1,4 +1,5 @@
 
+
 @import './styles/components.css';
 
 @tailwind base;
@@ -30,7 +31,7 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 13 18% 23%;
     --foreground: 210 40% 98%;
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
@@ -58,8 +59,15 @@
   }
   
   body {
-    @apply bg-background text-foreground;
+    @apply bg-[#0d1117] text-[#c9d1d9];
     font-feature-settings: "rlig" 1, "calt" 1;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  
+  html {
+    background-color: #0d1117;
   }
   
   /* Custom utility classes */
@@ -84,4 +92,9 @@
   .animation-delay-400 {
     animation-delay: 400ms;
   }
+}
+
+/* Force dark theme globally */
+:root {
+  color-scheme: dark;
 }

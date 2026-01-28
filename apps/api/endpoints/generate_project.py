@@ -1,3 +1,4 @@
+
 # backend/endpoints/generate_project.py
 import json
 import asyncio
@@ -136,5 +137,4 @@ class GenerateProjectHandler:
 
 # Handler instance
 handler = GenerateProjectHandler()
-
 

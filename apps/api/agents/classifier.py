@@ -1,3 +1,4 @@
+# api/agents/classifier.py
 import json
 # from apps.api.agents.agent_state import AgentState
 from .agent_state import AgentState
@@ -314,7 +315,7 @@ Now output the JSON classification:"""
         """Classify the user's prompt (compatible with workflow)"""
         logger.step("Classifier", f"started (call)")
         from .agent_state import AgentState
-        
+
         try:
             # Get the latest user message
             user_prompt = ""
