@@ -1,16 +1,30 @@
 
-# backend/endpoints/generate_project.py
+# # backend/endpoints/generate_project.py
+# import json
+# import asyncio
+# from fastapi import HTTPException
+# from langchain_core.messages import HumanMessage
+
+# from config import Config
+# from supabase_client import supabase
+
+# from utils.logger import Logger
+
+# from workflows.main_workflow import main_workflow
+
 import json
 import asyncio
+import time  # <-- NEW
 from fastapi import HTTPException
 from langchain_core.messages import HumanMessage
 
 from config import Config
 from supabase_client import supabase
-
 from utils.logger import Logger
-
 from workflows.main_workflow import main_workflow
+
+# ADD THIS IF NOT ALREADY PRESENT (for netlify_service)
+from services.netlify_service import netlify_service
 
 logger = Logger(__name__)
 
@@ -93,10 +107,34 @@ class GenerateProjectHandler:
             # Save to Supabase
             self._save_to_supabase(prompt, files)
             
+            
+            if detected_class == "Class A" and files:
+                logger.info("Starting Netlify deployment for preview...")
+                
+                try:
+                    site_name = f"codeless-{prompt[:20].lower().replace(' ', '-')}-{int(time.time())}"
+                    site = netlify_service.create_site(site_name)
+                    
+                    if site and site.get("id"):
+                        preview_url = netlify_service.deploy_files(site["id"], files)
+                        
+                        if preview_url:
+                            result["preview_url"] = preview_url
+                            result["site_id"] = site["id"]  # optional, for cleanup later
+                            
+                            # Save to Supabase - simple save without metadata
+                            supabase.save_project(prompt=prompt, files=files)
+                        else:
+                            logger.warning("Netlify deployment succeeded but no URL returned")
+                except Exception as deploy_err:
+                    logger.error(f"Preview deployment failed (continuing): {str(deploy_err)}")
+
+
             return {
                 "type": "success",
                 "files": files,
-                "detected_class": detected_class
+                "detected_class": detected_class,
+                "preview_url": result.get("preview_url")
             }
             
         except asyncio.TimeoutError:

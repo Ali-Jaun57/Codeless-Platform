@@ -124,4 +124,6 @@ class SupabaseClient:
             logger.error(f"Error getting project: {str(e)}")
             return None
 
+
+
 supabase = SupabaseClient()

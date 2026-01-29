@@ -22,6 +22,10 @@ class Config:
     MAX_ITERATIONS = int(os.getenv("MAX_ITERATIONS", "3"))
     WORKFLOW_TIMEOUT = int(os.getenv("WORKFLOW_TIMEOUT", "180"))
     
+    DEPLOYMENT_TIMEOUT = int(os.getenv("DEPLOYMENT_TIMEOUT", "300"))
+    NETLIFY_API_TOKEN = os.getenv("NETLIFY_API_TOKEN", "")
+    NETLIFY_TEAM_SLUG = os.getenv("NETLIFY_TEAM_SLUG", "")
+    NETLIFY_SITE_PREFIX = os.getenv("NETLIFY_SITE_PREFIX", "codeless")
     
     @classmethod
     def validate(cls):
