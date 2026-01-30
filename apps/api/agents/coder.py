@@ -135,11 +135,12 @@ class Coder:
                     continue
         return context
     
+
     def _create_prompt(self, file_info: list, context: str, messages: list) -> str:
-        """Improved prompt — strictly follow descriptions, use hooks, add images, fix navbar overlap"""
+        """Improved prompt — modern React, correct routing, hooks, Tailwind, no deprecated syntax"""
         previous_feedback = messages[-1].content if len(messages) > 0 else "None"
         
-        return f"""YOU ARE A CODE GENERATOR FOR CLASS A REACT APPS. OUTPUT ONLY PURE JSON.
+        return f"""YOU ARE A CODE GENERATOR FOR CLASS A REACT APPS USING VITE + REACT 18+ + TAILWIND. OUTPUT ONLY PURE JSON.
 
 PROJECT CONTEXT: {context}
 PREVIOUS FEEDBACK: {previous_feedback}
@@ -147,20 +148,28 @@ PREVIOUS FEEDBACK: {previous_feedback}
 TASK: Generate complete, production-ready code for these files EXACTLY as described:
 {json.dumps(file_info, indent=2)}
 
-CRITICAL RULES (FOLLOW STRICTLY):
-1. Output MUST be valid JSON: {{"files": [{{"path": "filename.ext", "content": "full code"}}]}}
-2. NO markdown, NO explanations, NO extra text
-3. Implement EVERY feature in the descriptions:
-   - You MUST use any planned hooks (e.g., import and apply useIntersectionObserver in relevant components for fade-in on scroll)
-   - Add opacity-0 translate-y-10 classes, then transition to opacity-100 translate-y-0 when intersecting
-   - Example usage: Wrap sections or cards with ref from the hook and add conditional classes
-   - Add placeholder images for products/showcases
-   - For single-page apps: add className="scroll-mt-16" to every <section id="...">
-   - Use advanced Tailwind: gradients, hover:scale-105, transitions, dark: variants if mentioned
-4. Code must be secure, correct imports, responsive
-5. Generate code for ALL listed files
+CRITICAL RULES (FOLLOW STRICTLY - VIOLATIONS WILL BREAK THE BUILD):
+1. Output MUST be valid JSON only: {{"files": [{{"path": "filename.ext", "content": "full code"}}]}}
+2. NO markdown, NO explanations, NO extra text outside JSON
+3. Use MODERN REACT only:
+   - Functional components + hooks only (no class components)
+   - React 18+ syntax
+   - If routing is needed: use React Router DOM v6+ syntax:
+     - Import: import {{ Routes, Route }} from 'react-router-dom'
+     - Use: <Routes><Route path="/add" element={{<AddQuestions />}} /></Routes>
+     - NEVER use <Switch>, <Route component=...>, or v5 syntax
+   - For simple "multi-page" feel (e.g., add questions / start quiz): prefer state-based navigation using useState for current view/page instead of router
+4. Implement EVERY feature in descriptions:
+   - MUST import and use any planned hooks (e.g., useIntersectionObserver for scroll fade-in)
+   - Add opacity-0 translate-y-10 → opacity-100 translate-y-0 on intersect
+   - Add placeholder images (use unsplash or placeholder.com)
+   - For single-page: add className="scroll-mt-16" to every <section id="...">
+   - Advanced Tailwind: gradients, hover:scale-105, transitions, dark: variants
+5. Code must be secure, correct imports, fully responsive
+6. Compatible with Vite + React + Tailwind template
+7. Generate code for ALL listed files exactly
 
-NOW OUTPUT THE JSON:"""
+NOW OUTPUT ONLY THE JSON:"""
     
     def _parse_code_response(self, raw_content: str) -> list:
         """Parse and validate the code response"""

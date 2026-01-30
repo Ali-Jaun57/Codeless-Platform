@@ -44,20 +44,31 @@ class SupabaseClient:
             logger.error(f"❌ Error fetching projects: {str(e)}")
             return []
     
-    def save_project(self, prompt, files, user_id=None):
-        """Save generated project to Supabase"""
+
+    def save_project(self, prompt: str, files: list, user_id: Optional[str] = None, preview_url: Optional[str] = None):
+        """Save generated project to Supabase with optional preview URL"""
         logger.debug(f"Saving project to Supabase: {len(files)} files")
         try:
-            self.client.table("projects").insert({
+            data = {
                 "user_id": user_id,
                 "prompt": prompt,
                 "files": files
-            }).execute()
-            logger.success("✅ Project saved to Supabase successfully")
-            return True
+            }
+            if preview_url:
+                data["preview_url"] = preview_url
+                logger.info(f"Saving preview URL: {preview_url}")
+
+            response = self.client.table("projects").insert(data).execute()
+            
+            if response.data:
+                logger.success("✅ Project saved to Supabase successfully")
+                return response.data[0]
+            else:
+                logger.error(f"Failed to save project: {response}")
+                return None
         except Exception as e:
-            logger.error(f"❌ Error saving project: {str(e)}")
-            return False
+            logger.error(f"❌ Save error: {str(e)}")
+            return None
         
 
     def save_deployment(self, deployment_info: Dict):

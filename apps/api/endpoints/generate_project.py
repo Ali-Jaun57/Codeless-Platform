@@ -1,16 +1,4 @@
 
-# # backend/endpoints/generate_project.py
-# import json
-# import asyncio
-# from fastapi import HTTPException
-# from langchain_core.messages import HumanMessage
-
-# from config import Config
-# from supabase_client import supabase
-
-# from utils.logger import Logger
-
-# from workflows.main_workflow import main_workflow
 
 import json
 import asyncio
@@ -98,16 +86,15 @@ class GenerateProjectHandler:
                     "detected_class": detected_class
                 }
             
-            # Handle successful classification (Class A - return files)
+        # Handle successful classification (Class A - return files)
             files = result.get("files", [])
             logger.success(f"✅ Workflow completed: {len(files)} files generated")
             logger.info(f"Final approved: {result.get('approved', False)}")
             logger.info(f"Iterations: {result.get('iteration', 0)}")
-            
-            # Save to Supabase
-            self._save_to_supabase(prompt, files)
-            
-            
+
+            preview_url = None  # Initialize preview_url variable
+
+            # Try Netlify deployment for Class A apps
             if detected_class == "Class A" and files:
                 logger.info("Starting Netlify deployment for preview...")
                 
@@ -121,20 +108,32 @@ class GenerateProjectHandler:
                         if preview_url:
                             result["preview_url"] = preview_url
                             result["site_id"] = site["id"]  # optional, for cleanup later
-                            
-                            # Save to Supabase - simple save without metadata
-                            supabase.save_project(prompt=prompt, files=files)
+                            logger.success(f"Deployed! Preview URL: {preview_url}")
                         else:
                             logger.warning("Netlify deployment succeeded but no URL returned")
                 except Exception as deploy_err:
                     logger.error(f"Preview deployment failed (continuing): {str(deploy_err)}")
+
+            # Save to Supabase WITH preview_url (if available)
+            # THIS SHOULD BE AFTER DEPLOYMENT ATTEMPT
+            supabase.save_project(
+                prompt=prompt,
+                files=files,
+                preview_url=preview_url  # This will be None if deployment failed
+            )
+
+            # Log the result
+            if preview_url:
+                logger.success(f"✅ Project saved to Supabase with preview URL: {preview_url}")
+            else:
+                logger.success(f"✅ Project saved to Supabase (no preview URL)")
 
 
             return {
                 "type": "success",
                 "files": files,
                 "detected_class": detected_class,
-                "preview_url": result.get("preview_url")
+                "preview_url": preview_url  # Use the variable directly
             }
             
         except asyncio.TimeoutError:
