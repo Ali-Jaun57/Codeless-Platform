@@ -25,7 +25,7 @@ class CodeGenerationWorkflow:
         )
         
         # Initialize agents
-        # self.classifier = Classifier(self.llm)
+        
         self.planner = Planner(self.llm)
         self.coder = Coder(self.llm)
         self.critic = Critic(self.llm)
@@ -41,7 +41,7 @@ class CodeGenerationWorkflow:
         workflow = StateGraph(AgentState)
         
         # Add nodes
-        # workflow.add_node("classifier", self.classifier)
+       
         workflow.add_node("planner", self.planner)
         workflow.add_node("coder", self.coder)
         workflow.add_node("critic", self.critic)

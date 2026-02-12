@@ -22,14 +22,12 @@
         "name": "next"
       }
     ],
-    // "baseUrl": ".",
-    // "paths": {
-    //   "@/*": ["./*"]
+    
     "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
-      ] // ← This enables @/ imports
+      ]
     }
   },
   "include": [

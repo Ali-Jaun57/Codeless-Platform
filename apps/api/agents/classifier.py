@@ -1,6 +1,5 @@
-# api/agents/classifier.py
+
 import json
-# from apps.api.agents.agent_state import AgentState
 from .agent_state import AgentState
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage
@@ -29,12 +28,6 @@ class Classifier:
             
             # Parse response
             classification = self._parse_classification(response.content)
-            
-            # logger.info(f"📊 Classification result: {classification.get('class')}")
-            # logger.info(f"   Confidence: {classification.get('confidence')}")
-            
-            # if classification.get("needs_clarification"):
-            #     logger.info(f"   Clarification needed: {classification.get('clarification_question')}")
 
             logger.classify(user_prompt, classification)
             
@@ -309,8 +302,7 @@ Now output the JSON classification:"""
                 "app_requirements": f"Classification parsing failed: {str(e)}"
             }
         
-    # Add a __call__ method to match other agents' interface
-    # def __call__(self, state: AgentState) -> dict:
+    # a __call__ method to match other agents' interface
     def __call__(self, state: 'AgentState') -> dict:    
         """Classify the user's prompt (compatible with workflow)"""
         logger.step("Classifier", f"started (call)")

@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 from utils.logger import Logger
 from utils.json_parser import extract_json_from_text
 from .agent_state import AgentState
-from .templates import TEMPLATE_CONTENTS  # ADD THIS IMPORT
+from .templates import TEMPLATE_CONTENTS 
 
 logger = Logger(__name__)
 
@@ -49,8 +49,6 @@ class Coder:
             # Generate base template files with planner variables
             base_files = self._generate_base_templates(state)
             
-            # Combine: CUSTOM FIRST (for critic sampling) + BASE TEMPLATES
-            # Use dict to handle any path override (custom wins)
             full_dict = {f["path"]: f for f in base_files}
             for f in coded_files:
                 full_dict[f["path"]] = f
@@ -96,7 +94,7 @@ class Coder:
         base_files = []
         for path, template_content in TEMPLATE_CONTENTS.items():
             if "BINARY_FILE_CONTENT" in template_content:
-                continue  # Skip favicon.ico
+                continue 
             
             content = template_content \
                 .replace("{{APP_NAME}}", planner_data["project_name"]) \

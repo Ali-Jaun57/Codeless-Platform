@@ -141,17 +141,72 @@ TEMPLATE_CONTENTS = {
       \"devCommand\": \"npm run dev\",
       \"installCommand\": \"npm install\",
       \"framework\": \"vite\",
-      \"outputDirectory\": \"dist\"
+      \"outputDirectory\": \"dist\",
+       "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": ""
+        }
+      ]
+    }
+  ]
     }""",
+"vercel.json": """
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors *;"
+        }
+      ]
+    }
+  ]
+}
+""",
+    
 
-    "vite.config.js": """import { defineConfig } from 'vite'
+    # "vite.config.js": """import { defineConfig } from 'vite'
+    # import react from '@vitejs/plugin-react'
+
+    # export default defineConfig({
+    #     plugins: [react()],
+    #     build: {
+    #         outDir: 'dist'
+    #     }
+    # })""",
+
+"vite.config.js": """import { defineConfig } from 'vite'
     import react from '@vitejs/plugin-react'
 
     export default defineConfig({
         plugins: [react()],
-        build: {
-            outDir: 'dist'
-        }
+        server: {
+    headers: {
+      'Content-Security-Policy': "frame-ancestors *"
+    }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
+  }
     })""",
 
 
@@ -235,4 +290,5 @@ TEMPLATE_CONTENTS = {
     width: 100%;
     min-height: 100vh;
     }
-    """}
+    """
+    }

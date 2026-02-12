@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """
 System monitoring and health check
 Run with: python monitor.py

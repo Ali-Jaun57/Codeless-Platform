@@ -26,7 +26,11 @@ class Config:
     NETLIFY_API_TOKEN = os.getenv("NETLIFY_API_TOKEN", "")
     NETLIFY_TEAM_SLUG = os.getenv("NETLIFY_TEAM_SLUG", "")
     NETLIFY_SITE_PREFIX = os.getenv("NETLIFY_SITE_PREFIX", "codeless")
+    VERCEL_TOKEN = os.getenv("VERCEL_TOKEN")
+
     
+
+
     @classmethod
     def validate(cls):
         missing = []

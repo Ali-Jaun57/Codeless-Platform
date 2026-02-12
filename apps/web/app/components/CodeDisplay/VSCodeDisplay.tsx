@@ -1,7 +1,11 @@
 
+
+
+
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -30,9 +34,11 @@ interface FileData {
 
 interface VSCodeDisplayProps {
   files: FileData[];
+  previewUrl?: string;
   onExport?: (files: FileData[]) => void;
   onClose?: () => void;
   isFullScreen?: boolean;
+  projectName?: string; 
 }
 
 interface FileNode {
@@ -46,14 +52,30 @@ type ViewMode = 'code' | 'preview';
 
 export default function VSCodeDisplay({ 
   files, 
+  previewUrl = '',  
   onExport,
   onClose,
-  isFullScreen = false
+  isFullScreen = false,
+  projectName = 'Generated Project' 
 }: VSCodeDisplayProps) {
   const [selectedFile, setSelectedFile] = useState<string>(files[0]?.path || '');
   const [openTabs, setOpenTabs] = useState<string[]>([files[0]?.path || '']);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<ViewMode>('code');
+  const [viewMode, setViewMode] = useState<ViewMode>('preview');
+  
+  // ========== ADDED: Auto-reload logic ==========
+  const [iframeKey, setIframeKey] = useState<number>(0);
+  const [lastPreviewUrl, setLastPreviewUrl] = useState<string>('');
+  // ==============================================
+  
+  // Auto-switch to preview and reload when new URL arrives
+  useEffect(() => {
+    if (previewUrl && previewUrl !== lastPreviewUrl) {
+      setLastPreviewUrl(previewUrl);
+      setIframeKey(prev => prev + 1);
+      setViewMode('preview');
+    }
+  }, [previewUrl, lastPreviewUrl]);
   
   // Initialize open tabs with first few files
   useEffect(() => {
@@ -136,7 +158,6 @@ export default function VSCodeDisplay({
     const extension = fileName.split('.').pop()?.toLowerCase();
     const fileNameLower = fileName.toLowerCase();
     
-    // Icon mapping based on file type
     if (fileNameLower === 'package.json') {
       return <Package className="file-item-icon icon-json" size={12} />;
     }
@@ -204,9 +225,8 @@ export default function VSCodeDisplay({
                 toggleFolder(node.path);
               } else {
                 setSelectedFile(node.path);
-                // Add to open tabs if not already there
                 if (!openTabs.includes(node.path)) {
-                  setOpenTabs(prev => [...prev, node.path].slice(-5)); // Keep only last 5 tabs
+                  setOpenTabs(prev => [...prev, node.path].slice(-5));
                 }
               }
             }}
@@ -229,11 +249,9 @@ export default function VSCodeDisplay({
   const closeTab = (tabPath: string, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    // Remove tab from openTabs
     const newTabs = openTabs.filter(tab => tab !== tabPath);
     setOpenTabs(newTabs);
     
-    // If we're closing the selected tab, select another one
     if (selectedFile === tabPath) {
       const nextTab = newTabs[0] || '';
       setSelectedFile(nextTab);
@@ -248,20 +266,23 @@ export default function VSCodeDisplay({
     <div className="code-panel">
       {/* Main View Tabs at the very top */}
       <div className="code-panel-tabs">
-        <button
-          className={`code-panel-tab ${viewMode === 'code' ? 'active' : ''}`}
+        <Button
+          variant={viewMode === 'preview' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setViewMode('preview')}
+          disabled={!previewUrl}
+        >
+          <Monitor className="h-4 w-4 mr-2" />
+          Preview
+        </Button>
+        <Button
+          variant={viewMode === 'code' ? 'default' : 'ghost'}
+          size="sm"
           onClick={() => setViewMode('code')}
         >
-          <Code2 className="h-3.5 w-3.5" />
+          <Code2 className="h-4 w-4 mr-2" />
           Code
-        </button>
-        <button
-          className={`code-panel-tab ${viewMode === 'preview' ? 'active' : ''}`}
-          onClick={() => setViewMode('preview')}
-        >
-          <Eye className="h-3.5 w-3.5" />
-          Preview
-        </button>
+        </Button>
       </div>
       
       <div className="code-panel-content">
@@ -272,7 +293,7 @@ export default function VSCodeDisplay({
             <div className="code-view-header">
               <div className="code-view-title">
                 <Code2 className="h-3.5 w-3.5" />
-                <span>Generated Project</span>
+                <span>{projectName || 'Generated Project'}</span>
               </div>
               <div className="code-view-actions">
                 {onExport && (
@@ -359,39 +380,39 @@ export default function VSCodeDisplay({
             </div>
           </>
         ) : (
-          /* PREVIEW VIEW - shows only preview content, no header/actions */
+          // ========== MODIFIED: Iframe with auto-reload key ==========
           <div className="preview-container">
-            <div className="preview-placeholder">
-              <Monitor className="preview-placeholder-icon" />
-              <h3>Live Preview</h3>
-              <p>
-                Preview your generated application in real-time. See how your app looks and behaves 
-                with instant updates as you modify the code.
-              </p>
-              <div className="mt-6 flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setViewMode('code')}
-                  className="px-4 text-xs"
-                >
-                  <Code2 className="h-3 w-3 mr-1.5" />
-                  Switch to Code
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="px-4 text-xs"
-                  onClick={() => {
-                    alert('Preview execution feature coming soon!');
-                  }}
-                >
-                  <Play className="h-3 w-3 mr-1.5" />
-                  Launch Preview
-                </Button>
+            {previewUrl ? (
+              <iframe
+                key={`iframe-${iframeKey}`}  // AUTO-RELOADS WHEN iframeKey CHANGES
+                src={previewUrl}
+                className="w-full h-full border-0"
+                title="Live Preview"
+                sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"
+                loading="lazy"
+              />
+            ) : (
+              <div className="preview-placeholder">
+                <Monitor className="preview-placeholder-icon" />
+                <h3>Live Preview</h3>
+                <p>
+                  Preview URL not available. The app may still be deploying or this project type doesn't support live preview.
+                </p>
+                <div className="mt-6 flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setViewMode('code')}
+                    className="px-4 text-xs"
+                  >
+                    <Code2 className="h-3 w-3 mr-1.5" />
+                    Switch to Code
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
+          // ===========================================================
         )}
       </div>
     </div>

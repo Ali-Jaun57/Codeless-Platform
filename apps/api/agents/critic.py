@@ -25,11 +25,11 @@ class Critic:
                     "messages": state.messages,
                     "iteration": state.iteration + 1,
                     "files": state.files,
-                    "approved": True  # Auto-approve empty
+                    "approved": True  
                 }
             
             # Create critique prompt
-            prompt = self._create_prompt(state.files[:3])  # Sample first 3 files
+            prompt = self._create_prompt(state.files[:3]) 
             
             # Get LLM response
             logger.debug("Calling LLM for critique...")
@@ -47,7 +47,7 @@ class Critic:
             new_state = {
                 "messages": state.messages + [AIMessage(content=response.content)],
                 "iteration": state.iteration + 1,
-                "files": state.files,  # Preserve files
+                "files": state.files, 
                 "approved": approved
             }
             

@@ -1,4 +1,4 @@
-# backend/utils/json_parser.py
+
 import json
 from typing import Any, Dict
 from .logger import Logger
@@ -10,7 +10,7 @@ def extract_json_from_text(text: str) -> Dict[str, Any]:
     logger.debug(f"Extracting JSON from text (first 200 chars): {text[:200]}...")
     
     try:
-        # Try to parse directly first
+        # parse directly first
         return json.loads(text)
     except json.JSONDecodeError:
         # Extract JSON from text
