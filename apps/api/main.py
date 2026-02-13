@@ -1,8 +1,4 @@
 
-
-
-
-
 from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,11 +13,11 @@ from config import Config
 from utils.logger import Logger
 
 from endpoints.generate_project import router as generate_router
-from endpoints.export_project import handler as export_handler
 from workflows.main_workflow import main_workflow
 from supabase_client import supabase  
 from endpoints.dashboard import router as dashboard_router
 from endpoints.generate_project import router as generate_router
+from endpoints.export_project import router as export_router
 
 
 # Initialize logger
@@ -89,24 +85,24 @@ class MessageResponse(MessageBase):
     created_at: datetime
 
 
-class GenerateRequest(BaseModel):
-    prompt: str
-    clarification: Optional[str] = None
-    detected_class: Optional[str] = None
+# class GenerateRequest(BaseModel):
+#     prompt: str
+#     clarification: Optional[str] = None
+#     detected_class: Optional[str] = None
 
-@app.post("/generate-project")
-async def old_generate(request: GenerateRequest):
-    # Keep old if needed, or remove
-    return await generate_handler.handle(request.prompt)
+# @app.post("/generate-project")
+# async def old_generate(request: GenerateRequest):
+#     # Keep old if needed, or remove
+#     return await generate_handler.handle(request.prompt)
 
-# Export endpoint (keep)
-class ExportRequest(BaseModel):
-    repo_name: str
-    files: List[Dict[str, Any]]
+# # Export endpoint (keep)
+# class ExportRequest(BaseModel):
+#     repo_name: str
+#     files: List[Dict[str, Any]]
 
-@app.post("/export-project")
-async def export_project(request: ExportRequest):
-    return await export_handler.handle(request.repo_name, request.files)
+# @app.post("/export-project")
+# async def export_project(request: ExportRequest):
+#     return await export_handler.handle(request.repo_name, request.files)
 
 # === NEW ENDPOINTS ===
 @app.get("/projects", response_model=List[ProjectResponse])
@@ -183,7 +179,7 @@ async def generate_in_project(
     return {"type": "success", "preview_url": result.get("preview_url")}
 
 app.include_router(dashboard_router, prefix="/api/v1")
-
+app.include_router(export_router)
 app.include_router(generate_router, prefix="/api/v1")
 
 # Startup

@@ -23,8 +23,9 @@ class Planner:
         
         try:
             # Step 1: Retrieve RAG context
-            rag_context = self._get_rag_context()
-            logger.debug(f"RAG context retrieved: {len(rag_context)} characters")
+            # rag_context = self._get_rag_context()
+            # logger.debug(f"RAG context retrieved: {len(rag_context)} characters")
+            logger.debug(f"No RAG retrival now")
             
 
             # Step 2: Get the user prompt EXACTLY like classifier does
@@ -42,7 +43,7 @@ class Planner:
 
 
             # Step 2: Create planning prompt
-            prompt = self._create_prompt(user_prompt, rag_context)
+            prompt = self._create_prompt(user_prompt)
             
             # Step 3: Get LLM response
             logger.debug("Calling LLM for planning...")
@@ -76,35 +77,35 @@ class Planner:
             raise
     
 
-    def _get_rag_context(self) -> str:
-        """Retrieve relevant previous projects for context"""
-        try:
-            from supabase_client import supabase
+    # def _get_rag_context(self) -> str:
+    #     """Retrieve relevant previous projects for context"""
+    #     try:
+    #         from supabase_client import supabase
             
-            projects = supabase.get_projects(limit=10)
+    #         projects = supabase.get_projects(limit=10)
             
-            if not projects:
-                return "No previous projects found."
+    #         if not projects:
+    #             return "No previous projects found."
             
-            relevant_context = "Previous similar projects (for inspiration only):\n"
-            count = 0
-            for project in projects:
-                if count >= 3:
-                    break
-                prompt = project.get('prompt', '')
-                file_names = [f.get("path", "") for f in project.get("files", [])[:5]]
-                relevant_context += f"- User requested: {prompt[:100]}...\n  Generated files: {file_names}\n\n"
-                count += 1
+    #         relevant_context = "Previous similar projects (for inspiration only):\n"
+    #         count = 0
+    #         for project in projects:
+    #             if count >= 3:
+    #                 break
+    #             prompt = project.get('prompt', '')
+    #             file_names = [f.get("path", "") for f in project.get("files", [])[:5]]
+    #             relevant_context += f"- User requested: {prompt[:100]}...\n  Generated files: {file_names}\n\n"
+    #             count += 1
             
-            relevant_context += "\nIMPORTANT: Previous projects may be simple HTML/JS. NOW we build modern React + Vite + Tailwind apps. Use above only for inspiration.\n"
-            return relevant_context
+    #         relevant_context += "\nIMPORTANT: Previous projects may be simple HTML/JS. NOW we build modern React + Vite + Tailwind apps. Use above only for inspiration.\n"
+    #         return relevant_context
             
-        except Exception as e:
-            logger.error(f"RAG context error: {str(e)}")
-            return "Error retrieving previous projects. Create new React plan."
+    #     except Exception as e:
+    #         logger.error(f"RAG context error: {str(e)}")
+    #         return "Error retrieving previous projects. Create new React plan."
 
 
-    def _create_prompt(self, user_request: str, context: str) -> str:
+    def _create_prompt(self, user_request: str) -> str:
         """Complete improved prompt with strict folder structure enforcement"""
         return f"""YOU ARE AN EXPERT REACT DEVELOPER SPECIALIZING IN CLASS A FRONTEND-ONLY APPS.
 
@@ -151,8 +152,7 @@ PLANNING GUIDELINES:
    - Split only when it improves readability (avoid too many tiny components)
    - Descriptions must explain: purpose, key features, Tailwind styling approach, responsiveness, state/interactions
 
-RAG CONTEXT (for inspiration only):
-{context}
+
 
 USER REQUEST:
 {user_request}

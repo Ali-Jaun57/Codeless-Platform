@@ -91,9 +91,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Fixed header area */}
+      <div className="flex-shrink-0 container mx-auto px-4 pt-8 max-w-7xl">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -104,7 +104,6 @@ export default function DashboardPage() {
               Welcome back, {user?.email?.split('@')[0] || 'Developer'}
             </p>
           </div>
-          
           <div className="flex items-center gap-3">
             <Button
               onClick={() => setIsModalOpen(true)}
@@ -123,36 +122,33 @@ export default function DashboardPage() {
             </Button>
           </div>
         </div>
-
-        {/* Projects Grid */}
-        {projects.length === 0 ? (
-          <EmptyState onCreateClick={() => setIsModalOpen(true)} />
-        ) : (
-          <>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-white">
-                Your Projects ({projects.length})
-              </h2>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  onDelete={handleDeleteProject}
-                />
-              ))}
-            </div>
-          </>
-        )}
       </div>
 
-      <CreateProjectModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onCreate={handleCreateProject}
-      />
+      {/* Scrollable projects area */}
+      <div className="flex-1 overflow-y-auto px-4 pb-8">
+        <div className="container mx-auto max-w-7xl">
+          {projects.length === 0 ? (
+            <EmptyState onCreateClick={() => setIsModalOpen(true)} />
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-white">
+                  Your Projects ({projects.length})
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {projects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    onDelete={handleDeleteProject}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

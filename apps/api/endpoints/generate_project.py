@@ -174,7 +174,9 @@ async def generate_project(
                 "confidence": result.get("confidence"),
                 "needs_clarification": result.get("needs_clarification", False),
                 "clarification_question": result.get("clarification_question")
-            }
+            },
+            project_name=result.get("project_name"),   # new line
+            app_title=result.get("app_title")          # new line
         )
         
         logger.success(f"✅ Generation complete: {len(files)} files, preview: {preview_url}")

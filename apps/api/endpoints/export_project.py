@@ -1,33 +1,36 @@
 
-from fastapi import HTTPException
+
+
+from fastapi import APIRouter, HTTPException
 from github import Github
 from config import Config
 from utils.logger import Logger
+from pydantic import BaseModel
+from typing import List, Dict, Any
 
 logger = Logger(__name__)
+
+# Request model (same as in main.py)
+class ExportRequest(BaseModel):
+    repo_name: str
+    files: List[Dict[str, Any]]
 
 class ExportProjectHandler:
     def __init__(self):
         logger.step("Export Project Handler", "initialized")
     
     async def handle(self, repo_name: str, files: list):
-        """Handle project export to GitHub"""
         logger.step("GitHub Export", f"started for repo: {repo_name}")
         logger.debug(f"Exporting {len(files)} files")
         
         try:
-            # Initialize GitHub client
             g = Github(Config.GITHUB_TOKEN)
             user = g.get_user()
-            
             logger.info(f"Authenticated as GitHub user: {user.login}")
             
-            # Create repository
-            logger.debug(f"Creating repository: {repo_name}")
             repo = user.create_repo(repo_name, private=True)
             logger.success(f"✅ Repository created: {repo.html_url}")
             
-            # Create files
             file_count = 0
             for file in files:
                 try:
@@ -47,5 +50,9 @@ class ExportProjectHandler:
             logger.error(f"❌ Export error: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
 
-# Handler instance
 handler = ExportProjectHandler()
+router = APIRouter(prefix="/api/v1", tags=["export"])
+
+@router.post("/export-project")
+async def export_project(request: ExportRequest):
+    return await handler.handle(request.repo_name, request.files)

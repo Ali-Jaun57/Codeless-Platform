@@ -212,7 +212,9 @@ class SupabaseClient:
         content: str, 
         files: Optional[List[Dict]] = None,
         preview_url: Optional[str] = None,
-        classification: Optional[Dict] = None
+        classification: Optional[Dict] = None,
+        project_name: Optional[str] = None,
+        app_title: Optional[str] = None
     ) -> Dict[str, Any]:
         """Save an assistant message with generated files and preview"""
         try:
@@ -239,51 +241,75 @@ class SupabaseClient:
             
             if response.data:
                 logger.success(f"✅ Assistant message saved for project {project_id}")
+                
+                # Also update project's latest files/preview
+                if files:
+                    update_data = {
+                        "latest_files": files,
+                        "latest_preview_url": preview_url,
+                        "updated_at": "now()"
+                    }
+                    if project_name:
+                        update_data["latest_app_name"] = project_name
+                    if app_title:
+                        update_data["latest_app_title"] = app_title
+                    
+                    update_response = self.client.table("project")\
+                        .update(update_data)\
+                        .eq("id", str(project_id))\
+                        .execute()
+                    
+                    if update_response.data:
+                        logger.success(f"✅ Project {project_id} updated with latest files/preview")
+                    else:
+                        logger.error(f"❌ Failed to update project {project_id}: no data returned")
+                
                 return response.data[0]
-            raise Exception("Failed to save assistant message")
-            
+            else:
+                raise Exception("Failed to save assistant message")
+                
         except Exception as e:
             logger.error(f"❌ Error saving assistant message: {str(e)}")
             raise
     
-    # ============ LEGACY METHODS (for backward compatibility) ============
+    # # ============ LEGACY METHODS (for backward compatibility) ============
     
-    def get_projects(self, limit=5):
-        """Retrieve recent projects for RAG context"""
-        logger.debug(f"Fetching {limit} recent projects from Supabase")
-        try:
-            response = self.client.table("projects")\
-                .select("prompt, files")\
-                .order("created_at", desc=True)\
-                .limit(limit)\
-                .execute()
-            logger.success(f"✅ Retrieved {len(response.data)} projects from Supabase")
-            return response.data
-        except Exception as e:
-            logger.error(f"❌ Error fetching projects: {str(e)}")
-            return []
+    # def get_projects(self, limit=5):
+    #     """Retrieve recent projects for RAG context"""
+    #     logger.debug(f"Fetching {limit} recent projects from Supabase")
+    #     try:
+    #         response = self.client.table("projects")\
+    #             .select("prompt, files")\
+    #             .order("created_at", desc=True)\
+    #             .limit(limit)\
+    #             .execute()
+    #         logger.success(f"✅ Retrieved {len(response.data)} projects from Supabase")
+    #         return response.data
+    #     except Exception as e:
+    #         logger.error(f"❌ Error fetching projects: {str(e)}")
+    #         return []
     
-    def save_project(self, prompt: str, files: list, user_id: Optional[str] = None, preview_url: Optional[str] = None):
-        """Save generated project to old projects table (legacy)"""
-        logger.debug(f"Saving project to old projects table: {len(files)} files")
-        try:
-            data = {
-                "user_id": user_id,
-                "prompt": prompt,
-                "files": files
-            }
-            if preview_url:
-                data["preview_url"] = preview_url
+    # def save_project(self, prompt: str, files: list, user_id: Optional[str] = None, preview_url: Optional[str] = None):
+    #     """Save generated project to old projects table (legacy)"""
+    #     logger.debug(f"Saving project to old projects table: {len(files)} files")
+    #     try:
+    #         data = {
+    #             "user_id": user_id,
+    #             "prompt": prompt,
+    #             "files": files
+    #         }
+    #         if preview_url:
+    #             data["preview_url"] = preview_url
             
-            response = self.client.table("projects").insert(data).execute()
+    #         response = self.client.table("projects").insert(data).execute()
             
-            if response.data:
-                logger.success("✅ Project saved to old projects table")
-                return response.data[0]
-            return None
-        except Exception as e:
-            logger.error(f"❌ Save error: {str(e)}")
-            return None
+    #         if response.data:
+    #             logger.success("✅ Project saved to old projects table")
+    #             return response.data[0]
+    #         return None
+    #     except Exception as e:
+    #         logger.error(f"❌ Save error: {str(e)}")
+    #         return None
 
 # Singleton instance
 supabase = SupabaseClient()
