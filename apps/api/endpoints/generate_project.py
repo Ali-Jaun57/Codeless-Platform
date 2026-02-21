@@ -1,15 +1,14 @@
 
 
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from uuid import UUID
 import asyncio
 import time
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
 from config import Config
 from utils.logger import Logger
@@ -18,7 +17,7 @@ from supabase_client import supabase
 
 # Import services
 from services.local_dev_service import local_dev_service
-from services.netlify_service import netlify_service 
+from services.netlify_service import netlify_service
 
 logger = Logger(__name__)
 router = APIRouter(prefix="/generate", tags=["generation"])
@@ -60,16 +59,37 @@ async def generate_project(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
         
-        # 2. Save user message to conversation
+        # 2. Fetch existing files (if any) for enhancement mode
+        existing_files = project.get("latest_files", []) or []
+        is_enhancement = bool(existing_files)
+        
+        # 3. Load full conversation history
+        conversation_messages = supabase.get_project_conversations(
+            request.project_id, current_user.id
+        )
+        
+        # Convert to LangChain message objects
+        history_messages: List = []
+        for msg in conversation_messages:
+            if msg["role"] == "user":
+                history_messages.append(HumanMessage(content=msg["content"]))
+            else:  # assistant
+                # Assistant messages may contain JSON or text; preserve as string
+                history_messages.append(AIMessage(content=msg["content"]))
+        
+        # Append the new user prompt
+        history_messages.append(HumanMessage(content=request.prompt))
+        
+        # 4. Save user message to conversation (for persistence)
         supabase.save_user_message(
             project_id=request.project_id,
             content=request.prompt
         )
         
-        # 3. Prepare inputs for workflow
+        # 5. Prepare inputs for workflow
         inputs = {
-            "messages": [HumanMessage(content=request.prompt)],
-            "files": [],
+            "messages": history_messages,               # Full conversation history
+            "files": [],                                 # Will be generated
             "iteration": 0,
             "max_iterations": Config.MAX_ITERATIONS,
             "approved": False,
@@ -79,17 +99,19 @@ async def generate_project(
             "clarification_question": None,
             "app_requirements": None,
             "project_id": str(request.project_id),
-            "user_id": current_user.id
+            "user_id": current_user.id,
+            "existing_files": existing_files,
+            "is_enhancement": is_enhancement
         }
         
-        # 4. Execute workflow
+        # 6. Execute workflow
         logger.debug(f"Starting workflow with timeout: {Config.WORKFLOW_TIMEOUT}s")
         result = await asyncio.wait_for(
             asyncio.to_thread(main_workflow.invoke, inputs),
             timeout=Config.WORKFLOW_TIMEOUT
         )
         
-        # 5. Check if clarification needed
+        # 7. Check if clarification needed
         if result.get("needs_clarification", False):
             return GenerateResponse(
                 type="clarification_needed",
@@ -98,7 +120,7 @@ async def generate_project(
                 confidence=result.get("confidence")
             )
         
-        # 6. Check if unsupported class
+        # 8. Check if unsupported class
         detected_class = result.get("detected_class")
         if detected_class and detected_class != "Class A":
             return GenerateResponse(
@@ -107,24 +129,30 @@ async def generate_project(
                 detected_class=detected_class
             )
         
-        # 7. Get generated files
-        files = result.get("files", [])
+        # 9. Get generated files from workflow
+        new_files = result.get("files", [])
+        
+        # 10. MERGE with existing files if in enhancement mode
+        if existing_files:
+            file_dict = {f["path"]: f for f in existing_files}
+            for new_file in new_files:
+                file_dict[new_file["path"]] = new_file   # overwrite or add
+            merged_files = list(file_dict.values())
+            logger.info(f"🔄 Merged {len(existing_files)} existing + {len(new_files)} new = {len(merged_files)} total files")
+        else:
+            merged_files = new_files
+        
         preview_url = None
         
-        # 8. 🖥️ LOCAL PREVIEW ENABLED - Netlify is COMMENTED OUT
-        if detected_class == "Class A" and files:
+        # 11. 🖥️ LOCAL PREVIEW ENABLED
+        if detected_class == "Class A" and merged_files:
             logger.info("🚀 Starting LOCAL development server for preview...")
             try:
-                # Generate a unique app ID for this project
                 app_id = f"project_{request.project_id}_{int(time.time())}"
-                
-                # Save files locally
-                app_folder = local_dev_service.save_files_locally(app_id, files)
+                app_folder = local_dev_service.save_files_locally(app_id, merged_files)
                 
                 if app_folder:
-                    # Start local server on port 4000
                     preview_url = local_dev_service.start_local_server(app_folder)
-                    
                     if preview_url:
                         logger.success(f"✅ Local preview available at: {preview_url}")
                         result["preview_url"] = preview_url
@@ -132,42 +160,14 @@ async def generate_project(
                         logger.warning("⚠️ Local server started but no URL returned")
                 else:
                     logger.warning("⚠️ Failed to save files locally")
-                    
             except Exception as deploy_err:
                 logger.error(f"❌ Local preview deployment failed: {str(deploy_err)}")
-                # Continue even if deployment fails
         
-        # # 🌐 NETLIFY DEPLOYMENT - COMMENTED OUT
-        
-        # # Try Netlify deployment for Class A apps
-        # if detected_class == "Class A" and files:
-        #     logger.info("🚀 Starting Netlify deployment for preview...")
-        #     try:
-        #         # Get project name from planner result
-        #         project_name = result.get("project_name", "codeless-app")
-        #         site_name = f"codeless-{project_name}-{int(time.time())}"
-                
-        #         # Create site and deploy
-        #         site = netlify_service.create_site(site_name)
-        #         if site and site.get("id"):
-        #             preview_url = netlify_service.deploy_files(site["id"], files)
-        #             if preview_url:
-        #                 logger.success(f"✅ Deployed! Preview URL: {preview_url}")
-        #                 result["preview_url"] = preview_url
-        #             else:
-        #                 logger.warning("⚠️ Netlify deployment succeeded but no URL returned")
-        #         else:
-        #             logger.warning("⚠️ Failed to create Netlify site")
-        #     except Exception as deploy_err:
-        #         logger.error(f"❌ Preview deployment failed: {str(deploy_err)}")
-        #         preview_url = None
-        
-        
-        # 9. Save assistant message with files and preview
+        # 12. Save assistant message with MERGED files and preview
         assistant_message = supabase.save_assistant_message(
             project_id=request.project_id,
             content="Your app has been generated successfully!",
-            files=files,
+            files=merged_files,
             preview_url=preview_url,
             classification={
                 "class": result.get("detected_class"),
@@ -175,15 +175,15 @@ async def generate_project(
                 "needs_clarification": result.get("needs_clarification", False),
                 "clarification_question": result.get("clarification_question")
             },
-            project_name=result.get("project_name"),   # new line
-            app_title=result.get("app_title")          # new line
+            project_name=result.get("project_name"),
+            app_title=result.get("app_title")
         )
         
-        logger.success(f"✅ Generation complete: {len(files)} files, preview: {preview_url}")
+        logger.success(f"✅ Generation complete: {len(merged_files)} files, preview: {preview_url}")
         
         return GenerateResponse(
             type="success",
-            files=files,
+            files=merged_files,
             preview_url=preview_url,
             detected_class=detected_class,
             conversation_id=assistant_message.get("id")

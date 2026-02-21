@@ -85,25 +85,6 @@ class MessageResponse(MessageBase):
     created_at: datetime
 
 
-# class GenerateRequest(BaseModel):
-#     prompt: str
-#     clarification: Optional[str] = None
-#     detected_class: Optional[str] = None
-
-# @app.post("/generate-project")
-# async def old_generate(request: GenerateRequest):
-#     # Keep old if needed, or remove
-#     return await generate_handler.handle(request.prompt)
-
-# # Export endpoint (keep)
-# class ExportRequest(BaseModel):
-#     repo_name: str
-#     files: List[Dict[str, Any]]
-
-# @app.post("/export-project")
-# async def export_project(request: ExportRequest):
-#     return await export_handler.handle(request.repo_name, request.files)
-
 # === NEW ENDPOINTS ===
 @app.get("/projects", response_model=List[ProjectResponse])
 async def list_projects(user = Depends(get_current_user)):

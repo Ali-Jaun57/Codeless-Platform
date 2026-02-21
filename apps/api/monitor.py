@@ -154,7 +154,7 @@ def main():
     
     healthy = monitor.run_checks()
     
-    if healthy:
+    if healthy: 
         sys.exit(0)
     else:
         sys.exit(1)

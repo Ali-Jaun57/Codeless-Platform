@@ -1,4 +1,4 @@
-// frontend/app/components/ClientAuth/ClientAuth.tsx
+
 'use client';
 
 import { Auth } from '@supabase/auth-ui-react';

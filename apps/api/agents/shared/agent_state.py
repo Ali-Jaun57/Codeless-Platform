@@ -14,33 +14,35 @@ class AgentState(BaseModel):
     needs_clarification: bool = False
     clarification_question: Optional[str] = None
     app_requirements: Optional[str] = None
-    
+
+    # Enhancement mode
+    existing_files: List[Dict[str, Any]] = []
+    is_enhancement: bool = False
+
+    # New fields for validation
+    app_folder: Optional[str] = None          # Path where the built app is stored
+    runtime_error: Optional[str] = None       # Runtime error captured by validator
+
     def add_message(self, message):
-        """Add a message to the state"""
         self.messages.append(message)
-    
+
     def update_files(self, files):
-        """Update files in the state"""
         self.files = files
-    
+
     def increment_iteration(self):
-        """Increment iteration counter"""
         self.iteration += 1
-    
+
     def set_approved(self, approved: bool):
-        """Set approval status"""
         self.approved = approved
 
     def set_classification(self, classification: dict):
-        """Set classification results"""
         self.detected_class = classification.get("class")
         self.confidence = classification.get("confidence")
         self.needs_clarification = classification.get("needs_clarification", False)
         self.clarification_question = classification.get("clarification_question")
         self.app_requirements = classification.get("app_requirements")
-    
+
     def is_complete(self) -> bool:
-        """Check if workflow should complete"""
-        return (self.iteration >= self.max_iterations or 
+        return (self.iteration >= self.max_iterations or
                 (self.approved and len(self.files) > 0) or
                 (self.iteration > 0 and len(self.files) == 0))

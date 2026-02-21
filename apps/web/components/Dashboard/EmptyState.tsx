@@ -8,6 +8,10 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({ onCreateClick }: EmptyStateProps) {
+  const handleClick = () => {
+    console.log('Create button clicked!'); // Debug log
+    onCreateClick();
+  };
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
       <div className="relative">
@@ -26,8 +30,8 @@ export default function EmptyState({ onCreateClick }: EmptyStateProps) {
       </p>
       
       <div className="flex flex-col sm:flex-row gap-4">
-        <Button
-          onClick={onCreateClick}
+         <Button
+          onClick={handleClick} // Wrapped with log
           className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-5 text-base"
         >
           <Sparkles className="h-5 w-5 mr-2" />

@@ -1,4 +1,4 @@
-// apps/web/app/lib/supabase.ts
+
 import { createBrowserClient } from '@supabase/ssr'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'

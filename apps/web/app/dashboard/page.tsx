@@ -1,3 +1,6 @@
+
+
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -55,13 +58,16 @@ export default function DashboardPage() {
   };
 
   const handleCreateProject = async (name: string, description: string) => {
+    console.log("Creating project:", name, description);
     try {
       const newProject = await projectsApi.create({ name, description });
+      console.log("Project created:", newProject);
       setProjects([newProject, ...projects]);
       setIsModalOpen(false);
       router.push(`/chat/${newProject.id}`);
     } catch (error) {
       console.error('Error creating project:', error);
+      alert('Failed to create project. Check console for details.');
     }
   };
 
@@ -106,7 +112,10 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-3">
             <Button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                console.log("Opening modal");
+                setIsModalOpen(true);
+              }}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             >
               <PlusCircle className="h-4 w-4 mr-2" />
@@ -149,6 +158,16 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          console.log("Closing modal");
+          setIsModalOpen(false);
+        }}
+        onCreate={handleCreateProject}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 
+
 from supabase import create_client, Client
 from config import Config
 from utils.logger import Logger
@@ -204,8 +205,6 @@ class SupabaseClient:
             logger.error(f"❌ Error saving user message: {str(e)}")
             raise
     
-
-    
     def save_assistant_message(
         self, 
         project_id: UUID, 
@@ -271,45 +270,6 @@ class SupabaseClient:
         except Exception as e:
             logger.error(f"❌ Error saving assistant message: {str(e)}")
             raise
-    
-    # # ============ LEGACY METHODS (for backward compatibility) ============
-    
-    # def get_projects(self, limit=5):
-    #     """Retrieve recent projects for RAG context"""
-    #     logger.debug(f"Fetching {limit} recent projects from Supabase")
-    #     try:
-    #         response = self.client.table("projects")\
-    #             .select("prompt, files")\
-    #             .order("created_at", desc=True)\
-    #             .limit(limit)\
-    #             .execute()
-    #         logger.success(f"✅ Retrieved {len(response.data)} projects from Supabase")
-    #         return response.data
-    #     except Exception as e:
-    #         logger.error(f"❌ Error fetching projects: {str(e)}")
-    #         return []
-    
-    # def save_project(self, prompt: str, files: list, user_id: Optional[str] = None, preview_url: Optional[str] = None):
-    #     """Save generated project to old projects table (legacy)"""
-    #     logger.debug(f"Saving project to old projects table: {len(files)} files")
-    #     try:
-    #         data = {
-    #             "user_id": user_id,
-    #             "prompt": prompt,
-    #             "files": files
-    #         }
-    #         if preview_url:
-    #             data["preview_url"] = preview_url
-            
-    #         response = self.client.table("projects").insert(data).execute()
-            
-    #         if response.data:
-    #             logger.success("✅ Project saved to old projects table")
-    #             return response.data[0]
-    #         return None
-    #     except Exception as e:
-    #         logger.error(f"❌ Save error: {str(e)}")
-    #         return None
 
 # Singleton instance
 supabase = SupabaseClient()
