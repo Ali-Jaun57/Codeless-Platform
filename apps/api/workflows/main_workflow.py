@@ -10,6 +10,7 @@ from langchain_openai import ChatOpenAI
 from agents.shared.agent_state import AgentState
 from agents.shared.classifier import Classifier
 from workflows.class_a_workflow import workflow as class_a_workflow
+from workflows.class_b_workflow import workflow as class_b_workflow
 from utils.logger import Logger
 from config import Config
 
@@ -34,7 +35,7 @@ class MainWorkflow:
         # Store class workflows (add more as we implement them)
         self.class_workflows = {
             "Class A": class_a_workflow,
-            # "Class B": class_b_workflow,  # Future
+            "Class B": class_b_workflow,  
             # "Class C": class_c_workflow,  # Future
         }
         
@@ -53,7 +54,9 @@ class MainWorkflow:
         
         # Add class workflow execution nodes
         workflow.add_node("execute_class_a", lambda state: self._execute_class_workflow(state, "Class A"))
-        # Add more as: workflow.add_node("execute_class_b", lambda state: self._execute_class_workflow(state, "Class B"))
+        workflow.add_node("execute_class_b", lambda state: self._execute_class_workflow(state, "Class B")) 
+
+        # Add more as: workflow.add_node("execute_class_c", lambda state: self._execute_class_workflow(state, "Class C"))
         
         # Set entry point
         workflow.set_entry_point("classifier")
@@ -67,14 +70,15 @@ class MainWorkflow:
                 "no_class_matched": END,
                 "unsupported_class": END,
                 "Class A": "execute_class_a",
-                # "Class B": "execute_class_b",  # When implemented
+                "Class B": "execute_class_b"
                 # "Class C": "execute_class_c",  # When implemented
             }
         )
         
         # Connect class workflows to END
         workflow.add_edge("execute_class_a", END)
-        # workflow.add_edge("execute_class_b", END)  # When implemented
+        workflow.add_edge("execute_class_b", END)
+        # workflow.add_edge("execute_class_c", END)  # When implemented
         
         # Compile graph
         compiled_graph = workflow.compile()

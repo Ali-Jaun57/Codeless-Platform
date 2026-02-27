@@ -15,7 +15,7 @@ logger = Logger(__name__)
 class Critic:
     def __init__(self, llm: ChatOpenAI):
         self.llm = llm
-        logger.step("Critic Agent", "initialized")
+        logger.step("Class A Critic Agent", "initialized")
 
     def __call__(self, state: AgentState) -> dict:
         logger.step("Critic", f"started (iteration {state.iteration})")

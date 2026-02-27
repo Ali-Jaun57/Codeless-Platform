@@ -18,7 +18,7 @@ logger = Logger(__name__)
 class Planner:
     def __init__(self, llm: ChatOpenAI):
         self.llm = llm
-        logger.step("Planner Agent", "initialized")
+        logger.step("Class A Planner Agent", "initialized")
 
     def __call__(self, state: AgentState) -> dict:
         logger.step("Planner", "started")
@@ -35,7 +35,7 @@ class Planner:
                 logger.warning("No user prompt found, using fallback")
                 user_prompt = "Create a React app"
 
-            logger.debug(f"User prompt: {user_prompt[:100]}...")
+            logger.debug(f"User prompt: {user_prompt}")
 
             conversation_history = self._build_conversation_history(state.messages)
 

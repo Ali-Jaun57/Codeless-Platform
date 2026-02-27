@@ -8,7 +8,7 @@ logger = Logger(__name__)
 
 class Validator:
     def __init__(self):
-        logger.step("Validator Agent", "initialized")
+        logger.step("Class A Validator Agent", "initialized")
 
     def __call__(self, state: AgentState) -> dict:
         """Synchronous wrapper that runs the async validation in a new event loop."""

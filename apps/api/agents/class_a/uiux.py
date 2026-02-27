@@ -21,7 +21,7 @@ logger = Logger(__name__)
 class UIUXAgent:
     def __init__(self, llm: ChatAnthropic):
         self.llm = llm
-        logger.step("UI/UX Agent", "initialized")
+        logger.step("Class A UI/UX Agent", "initialized")
 
     def __call__(self, state: AgentState) -> dict:
         logger.step("UI/UX", "started (enhancement)")

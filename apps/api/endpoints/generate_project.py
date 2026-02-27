@@ -122,10 +122,12 @@ async def generate_project(
         
         # 8. Check if unsupported class
         detected_class = result.get("detected_class")
-        if detected_class and detected_class != "Class A":
+        
+        supported_classes = ["Class A", "Class B"]   # Add Class B
+        if detected_class and detected_class not in supported_classes:
             return GenerateResponse(
                 type="unsupported_class",
-                message=f"{detected_class} is not currently supported. Only Class A (frontend-only apps) are available.",
+                message=f"{detected_class} is not currently supported. Only Class A and Class B are available.",
                 detected_class=detected_class
             )
         

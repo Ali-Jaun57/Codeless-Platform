@@ -30,21 +30,20 @@ logger = Logger(__name__)
 
 class CodeGenerationWorkflow:
     def __init__(self):
-        logger.step("Code Generation Workflow", "initializing")
+        logger.step("Class A Code Generation Workflow", "initializing")
 
         # Common LLM parameters (except timeout)
-        base_kwargs = {
+        OpenAIClient = {
             "temperature": 0.5,
             "api_key": Config.OPENAI_API_KEY
         }
 
         # Planner & Critic: 60s timeout
-        planner_llm = ChatOpenAI(model=Config.PLANNER_MODEL, timeout=60, **base_kwargs)
-        critic_llm  = ChatOpenAI(model=Config.CRITIC_MODEL,  timeout=60, **base_kwargs)
+        planner_llm = ChatOpenAI(model=Config.PLANNER_MODEL, timeout=60, **OpenAIClient)
+        critic_llm  = ChatOpenAI(model=Config.CRITIC_MODEL,  timeout=60, **OpenAIClient)
 
         # Coder: longer timeout (5 minutes) for complex code generation
-        coder_llm   = ChatOpenAI(model=Config.CODER_MODEL,   timeout=300, **base_kwargs)
-
+        coder_llm   = ChatOpenAI(model=Config.CODER_MODEL,   timeout=300, **OpenAIClient)
         # Anthropic LLM for UI/UX
         uiux_llm = ChatAnthropic(
             model=Config.UIUX_MODEL,

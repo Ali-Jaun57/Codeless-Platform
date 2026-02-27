@@ -107,7 +107,7 @@ class ValidationService:
                 ["npx", "serve", "-l", str(preferred_port)],
                 cwd=str(directory),
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL 
             )
             await asyncio.sleep(2)  # serve might take a bit longer
             if proc.poll() is None:

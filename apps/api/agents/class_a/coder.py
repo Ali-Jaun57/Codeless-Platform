@@ -19,7 +19,7 @@ logger = Logger(__name__)
 class Coder:
     def __init__(self, llm: ChatOpenAI):  # now accepts ChatOpenAI
         self.llm = llm
-        logger.step("Coder Agent", "initialized")
+        logger.step("Class A Coder Agent", "initialized")
 
     def __call__(self, state: AgentState) -> dict:
         logger.step("Coder", f"started (iteration {state.iteration})")
@@ -167,9 +167,9 @@ CRITICAL RULES (FOLLOW STRICTLY – VIOLATIONS WILL BREAK THE BUILD):
    - Functional components + hooks only (no class components)
    - React 18+ syntax
    - If routing is needed: use React Router DOM v6+ syntax (but prefer single‑page design)
-4. **NEVER leave placeholder comments like `// Logic to ...` or `TODO`. Every function you call must be fully implemented in the same file or properly imported.**
-5. **Every function you reference must be defined. If you need a helper function, define it in the same file or in `src/utils/utils.js`.**
-6. **Allowed lightweight libraries (if needed):** `react-dnd`, `react-dnd-html5-backend`, `interactjs`, `immer`, `uuid`, `date-fns`, `dayjs`, `lodash`, `clsx`. If you use any of these, you MUST include them in the `dependencies` section of package.json.
+4. **NEVER leave placeholder comments like `// Logic to ...` or `TODO`. Every function you call must be ful in the same file or in `src/utils/utils.js`.**
+6. **Allowed lightweight libraries (ily implemented in the same file or properly imported.**
+5. **Every function you reference must be defined. If you need a helper function, define itf needed):** `react-dnd`, `react-dnd-html5-backend`, `interactjs`, `immer`, `uuid`, `date-fns`, `dayjs`, `lodash`, `clsx`. If you use any of these, you MUST include them in the `dependencies` section of package.json.
 7. Implement EVERY feature described in the planner’s file descriptions.
 8. Code must be secure, correct imports, fully responsive.
 9. Compatible with Vite + React + Tailwind template.
