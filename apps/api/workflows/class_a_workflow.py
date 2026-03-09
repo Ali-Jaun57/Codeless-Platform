@@ -48,7 +48,7 @@ class CodeGenerationWorkflow:
         uiux_llm = ChatAnthropic(
             model=Config.UIUX_MODEL,
             temperature=0.3,               # lower temperature for more focused enhancements
-            timeout=600,
+            timeout=600, 
             max_tokens=60000,
             api_key=Config.ANTHROPIC_API_KEY
         )
@@ -183,6 +183,33 @@ class CodeGenerationWorkflow:
         compiled_graph = workflow.compile()
         logger.success("✅ Workflow graph compiled successfully")
         return compiled_graph
+    
+
+    # def _build_workflow(self):
+    #     logger.debug("Building Class A workflow graph (Planner -> Coder -> Builder -> End)...")
+
+    #     workflow = StateGraph(AgentState)
+
+    #     # 1. Add the specific nodes needed for this flow
+    #     workflow.add_node("planner", self.planner)
+    #     workflow.add_node("coder", self.coder)
+    #     workflow.add_node("builder", self._builder_node) # Using the _builder_node reference from your original code
+    #     workflow.add_node("validator", self.validator)
+
+
+    #     # 2. Set the starting point
+    #     workflow.set_entry_point("planner")
+
+    #     # 3. Define the sequential edges
+    #     workflow.add_edge("planner", "coder")   # Move from Planner to Coder
+    #     workflow.add_edge("coder", "builder")   # Move from Coder to Builder
+    #     workflow.add_edge("builder", "validator")
+    #     workflow.add_edge("validator", END)    # End the workflow after Validator finishes
+
+    #     # 4. Compile the graph
+    #     compiled_graph = workflow.compile()
+    #     logger.success("✅ Workflow compiled: Planner -> Coder -> Builder -> Validator -> END")
+    #     return compiled_graph
 
     def invoke(self, inputs: dict):
         logger.step("Workflow Execution", "started")

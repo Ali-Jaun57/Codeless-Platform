@@ -1,4 +1,5 @@
 
+
 FOLDER_STRUCTURE_B = """
 my-app/
 ├── 📄 .env.example                  # Environment variables template (Supabase URL, anon key)

@@ -1,5 +1,4 @@
 
-
 from supabase import create_client, Client
 from config import Config
 from utils.logger import Logger
@@ -213,7 +212,9 @@ class SupabaseClient:
         preview_url: Optional[str] = None,
         classification: Optional[Dict] = None,
         project_name: Optional[str] = None,
-        app_title: Optional[str] = None
+        app_title: Optional[str] = None,
+        supabase_ref: Optional[str] = None,
+        supabase_service_key: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Save an assistant message with generated files and preview"""
         try:
@@ -252,6 +253,10 @@ class SupabaseClient:
                         update_data["latest_app_name"] = project_name
                     if app_title:
                         update_data["latest_app_title"] = app_title
+                    if supabase_ref:
+                        update_data["supabase_ref"] = supabase_ref
+                    if supabase_service_key:
+                        update_data["supabase_service_key"] = supabase_service_key
                     
                     update_response = self.client.table("project")\
                         .update(update_data)\

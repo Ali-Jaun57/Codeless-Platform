@@ -2,7 +2,6 @@
 
 
 
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -38,7 +37,9 @@ interface VSCodeDisplayProps {
   onExport?: (files: FileData[]) => void;
   onClose?: () => void;
   isFullScreen?: boolean;
-  projectName?: string; 
+  projectName?: string;
+  // When true: no outer code-panel wrapper, no Preview/Code tab bar — just the editor
+  codeOnly?: boolean;
 }
 
 interface FileNode {
@@ -56,28 +57,26 @@ export default function VSCodeDisplay({
   onExport,
   onClose,
   isFullScreen = false,
-  projectName = 'Generated Project' 
+  projectName = 'Generated Project',
+  codeOnly = false,
 }: VSCodeDisplayProps) {
   const [selectedFile, setSelectedFile] = useState<string>(files[0]?.path || '');
   const [openTabs, setOpenTabs] = useState<string[]>([files[0]?.path || '']);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<ViewMode>('preview');
+  const [viewMode, setViewMode] = useState<ViewMode>(codeOnly ? 'code' : 'preview');
   
-  // ========== ADDED: Auto-reload logic ==========
   const [iframeKey, setIframeKey] = useState<number>(0);
   const [lastPreviewUrl, setLastPreviewUrl] = useState<string>('');
-  // ==============================================
   
-  // Auto-switch to preview and reload when new URL arrives
+  // Auto-switch to preview and reload when new URL arrives (only when not codeOnly)
   useEffect(() => {
-    if (previewUrl && previewUrl !== lastPreviewUrl) {
+    if (!codeOnly && previewUrl && previewUrl !== lastPreviewUrl) {
       setLastPreviewUrl(previewUrl);
       setIframeKey(prev => prev + 1);
       setViewMode('preview');
     }
-  }, [previewUrl, lastPreviewUrl]);
+  }, [previewUrl, lastPreviewUrl, codeOnly]);
   
-  // Initialize open tabs with first few files
   useEffect(() => {
     const initialTabs = files.slice(0, 3).map(f => f.path);
     setOpenTabs(initialTabs);
@@ -86,7 +85,6 @@ export default function VSCodeDisplay({
     }
   }, [files]);
   
-  // Convert flat file list to tree structure
   const buildFileTree = (): FileNode[] => {
     const root: FileNode[] = [];
     const pathMap: Record<string, FileNode> = {};
@@ -121,7 +119,6 @@ export default function VSCodeDisplay({
       });
     });
     
-    // Sort folders first, then files
     const sortNodes = (nodes: FileNode[]): FileNode[] => {
       return nodes.sort((a, b) => {
         if (a.type === 'folder' && b.type !== 'folder') return -1;
@@ -163,49 +160,25 @@ export default function VSCodeDisplay({
     }
     
     switch (extension) {
-      case 'js':
-        return <FileCode className="file-item-icon icon-js" size={12} />;
-      case 'jsx':
-        return <Code2 className="file-item-icon icon-jsx" size={12} />;
-      case 'ts':
-        return <FileCode className="file-item-icon icon-ts" size={12} />;
-      case 'tsx':
-        return <Code2 className="file-item-icon icon-tsx" size={12} />;
-      case 'py':
-        return <Terminal className="file-item-icon icon-py" size={12} />;
-      case 'html':
-        return <FileCode className="file-item-icon icon-html" size={12} />;
-      case 'css':
-        return <FileCode className="file-item-icon icon-css" size={12} />;
-      case 'json':
-        return <FileJson className="file-item-icon icon-json" size={12} />;
-      case 'md':
-        return <FileText className="file-item-icon icon-md" size={12} />;
-      case 'txt':
-      case 'gitignore':
-        return <FileText className="file-item-icon icon-file" size={12} />;
-      case 'config':
-      case 'conf':
-        return <Settings className="file-item-icon icon-file" size={12} />;
-      default:
-        return <File className="file-item-icon icon-file" size={12} />;
+      case 'js':  return <FileCode className="file-item-icon icon-js" size={12} />;
+      case 'jsx': return <Code2 className="file-item-icon icon-jsx" size={12} />;
+      case 'ts':  return <FileCode className="file-item-icon icon-ts" size={12} />;
+      case 'tsx': return <Code2 className="file-item-icon icon-tsx" size={12} />;
+      case 'py':  return <Terminal className="file-item-icon icon-py" size={12} />;
+      case 'html':return <FileCode className="file-item-icon icon-html" size={12} />;
+      case 'css': return <FileCode className="file-item-icon icon-css" size={12} />;
+      case 'json':return <FileJson className="file-item-icon icon-json" size={12} />;
+      case 'md':  return <FileText className="file-item-icon icon-md" size={12} />;
+      default:    return <File className="file-item-icon icon-file" size={12} />;
     }
   };
   
   const getLanguage = (path: string): string => {
     const extension = path.split('.').pop() || 'text';
     const languageMap: Record<string, string> = {
-      'js': 'javascript',
-      'jsx': 'jsx',
-      'ts': 'typescript',
-      'tsx': 'tsx',
-      'py': 'python',
-      'html': 'html',
-      'css': 'css',
-      'json': 'json',
-      'md': 'markdown',
-      'txt': 'text',
-      'gitignore': 'text'
+      'js': 'javascript', 'jsx': 'jsx', 'ts': 'typescript', 'tsx': 'tsx',
+      'py': 'python', 'html': 'html', 'css': 'css', 'json': 'json',
+      'md': 'markdown', 'txt': 'text', 'gitignore': 'text', 'sql': 'sql',
     };
     return languageMap[extension.toLowerCase()] || extension;
   };
@@ -235,9 +208,7 @@ export default function VSCodeDisplay({
             <span className="file-name">{node.name}</span>
           </div>
           {isFolder && isOpen && node.children && (
-            <div>
-              {renderFileTree(node.children, level + 1)}
-            </div>
+            <div>{renderFileTree(node.children, level + 1)}</div>
           )}
         </div>
       );
@@ -248,143 +219,131 @@ export default function VSCodeDisplay({
   
   const closeTab = (tabPath: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    
     const newTabs = openTabs.filter(tab => tab !== tabPath);
     setOpenTabs(newTabs);
-    
     if (selectedFile === tabPath) {
-      const nextTab = newTabs[0] || '';
-      setSelectedFile(nextTab);
+      setSelectedFile(newTabs[0] || '');
     }
   };
-  
-  const selectTab = (tabPath: string) => {
-    setSelectedFile(tabPath);
-  };
-  
+
+  // ─── Code editor JSX (shared between both modes) ──────────────────────────
+  const codeEditorJSX = (
+    <>
+      {/* Header with project name, Export, and optional Close */}
+      <div className="code-view-header">
+        <div className="code-view-title">
+          <Code2 className="h-3.5 w-3.5" />
+          <span>{projectName || 'Generated Project'}</span>
+        </div>
+        <div className="code-view-actions">
+          {onExport && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => onExport(files)}
+              className="btn-primary h-7 px-3 text-xs"
+            >
+              <Zap className="h-3 w-3 mr-1.5" />
+              Export to GitHub
+            </Button>
+          )}
+          {onClose && (
+            <Button variant="ghost" size="sm" onClick={onClose} className="btn-ghost h-7 w-7 p-0">
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* File Explorer + Editor */}
+      <div className="code-view-content">
+        <div className="file-explorer">
+          <div className="file-explorer-header">EXPLORER</div>
+          <ScrollArea className="file-tree custom-scrollbar">
+            {renderFileTree(fileTree)}
+          </ScrollArea>
+        </div>
+        <div className="editor-container">
+          <div className="editor-tabs custom-scrollbar">
+            {openTabs.map(tabPath => {
+              const file = files.find(f => f.path === tabPath);
+              const fileName = file?.path.split('/').pop() || tabPath;
+              return (
+                <div
+                  key={tabPath}
+                  className={`editor-tab ${selectedFile === tabPath ? 'active' : ''}`}
+                  onClick={() => setSelectedFile(tabPath)}
+                >
+                  {getFileIcon(fileName, false, false)}
+                  <span className="truncate text-xs">{fileName}</span>
+                  <div className="tab-close" onClick={(e) => closeTab(tabPath, e)}>
+                    <X className="h-2.5 w-2.5" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="editor-content custom-scrollbar">
+            {selectedFileData ? (
+              <CodeBlock
+                code={selectedFileData.content}
+                language={getLanguage(selectedFileData.path)}
+                showLineNumbers={true}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-[#94a3b8]">
+                <div className="text-center">
+                  <File className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs">Select a file to view its content</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
+  // ─── codeOnly mode: no outer panel wrapper, no tab bar ────────────────────
+  // Used when ChatClient owns the tab bar (flat Preview | Code | Cloud tabs)
+  if (codeOnly) {
+    return (
+      <div className="code-panel-content" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+        {codeEditorJSX}
+      </div>
+    );
+  }
+
+  // ─── Standalone mode: full panel with its own Preview/Code tab bar ─────────
   return (
     <div className="code-panel">
-      {/* Main View Tabs at the very top */}
       <div className="code-panel-tabs">
-        <Button
-          variant={viewMode === 'preview' ? 'default' : 'ghost'}
-          size="sm"
+        <button
+          className={`code-panel-tab ${viewMode === 'preview' ? 'active' : ''}`}
           onClick={() => setViewMode('preview')}
           disabled={!previewUrl}
+          style={{ opacity: previewUrl ? 1 : 0.4, cursor: previewUrl ? 'pointer' : 'not-allowed' }}
         >
-          <Monitor className="h-4 w-4 mr-2" />
+          <Monitor size={14} />
           Preview
-        </Button>
-        <Button
-          variant={viewMode === 'code' ? 'default' : 'ghost'}
-          size="sm"
+        </button>
+        <button
+          className={`code-panel-tab ${viewMode === 'code' ? 'active' : ''}`}
           onClick={() => setViewMode('code')}
         >
-          <Code2 className="h-4 w-4 mr-2" />
+          <Code2 size={14} />
           Code
-        </Button>
+        </button>
       </div>
       
       <div className="code-panel-content">
-        {/* CODE VIEW - shows Generated Project header, Export button, file explorer, and editor */}
         {viewMode === 'code' ? (
-          <>
-            {/* VS Code Header with title and actions */}
-            <div className="code-view-header">
-              <div className="code-view-title">
-                <Code2 className="h-3.5 w-3.5" />
-                <span>{projectName || 'Generated Project'}</span>
-              </div>
-              <div className="code-view-actions">
-                {onExport && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => onExport(files)}
-                    className="btn-primary h-7 px-3 text-xs"
-                  >
-                    <Zap className="h-3 w-3 mr-1.5" />
-                    Export to GitHub
-                  </Button>
-                )}
-                {onClose && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onClose}
-                    className="btn-ghost h-7 w-7 p-0"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-              </div>
-            </div>
-            
-            {/* File Explorer and Editor Area */}
-            <div className="code-view-content">
-              {/* File Explorer Sidebar */}
-              <div className="file-explorer">
-                <div className="file-explorer-header">
-                  EXPLORER
-                </div>
-                <ScrollArea className="file-tree custom-scrollbar">
-                  {renderFileTree(fileTree)}
-                </ScrollArea>
-              </div>
-              
-              {/* Editor Area */}
-              <div className="editor-container">
-                {/* File Tabs */}
-                <div className="editor-tabs custom-scrollbar">
-                  {openTabs.map(tabPath => {
-                    const file = files.find(f => f.path === tabPath);
-                    const fileName = file?.path.split('/').pop() || tabPath;
-                    
-                    return (
-                      <div
-                        key={tabPath}
-                        className={`editor-tab ${selectedFile === tabPath ? 'active' : ''}`}
-                        onClick={() => selectTab(tabPath)}
-                      >
-                        {getFileIcon(fileName, false, false)}
-                        <span className="truncate text-xs">{fileName}</span>
-                        <div 
-                          className="tab-close"
-                          onClick={(e) => closeTab(tabPath, e)}
-                        >
-                          <X className="h-2.5 w-2.5" />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                
-                {/* Code Editor */}
-                <div className="editor-content custom-scrollbar">
-                  {selectedFileData ? (
-                    <CodeBlock
-                      code={selectedFileData.content}
-                      language={getLanguage(selectedFileData.path)}
-                      showLineNumbers={true}
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-[#94a3b8]">
-                      <div className="text-center">
-                        <File className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-xs">Select a file to view its content</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </>
+          codeEditorJSX
         ) : (
-          // ========== MODIFIED: Iframe with auto-reload key ==========
           <div className="preview-container">
             {previewUrl ? (
               <iframe
-                key={`iframe-${iframeKey}`}  // AUTO-RELOADS WHEN iframeKey CHANGES
+                key={`iframe-${iframeKey}`}
                 src={previewUrl}
                 className="w-full h-full border-0"
                 title="Live Preview"
@@ -395,16 +354,9 @@ export default function VSCodeDisplay({
               <div className="preview-placeholder">
                 <Monitor className="preview-placeholder-icon" />
                 <h3>Live Preview</h3>
-                <p>
-                  Preview URL not available. The app may still be deploying or this project type doesn't support live preview.
-                </p>
+                <p>Preview URL not available. The app may still be deploying or this project type doesn't support live preview.</p>
                 <div className="mt-6 flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setViewMode('code')}
-                    className="px-4 text-xs"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setViewMode('code')} className="px-4 text-xs">
                     <Code2 className="h-3 w-3 mr-1.5" />
                     Switch to Code
                   </Button>
@@ -412,7 +364,6 @@ export default function VSCodeDisplay({
               </div>
             )}
           </div>
-          // ===========================================================
         )}
       </div>
     </div>

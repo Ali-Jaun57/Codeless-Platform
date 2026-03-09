@@ -1,4 +1,5 @@
 
+
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -25,6 +26,7 @@ class ProjectResponse(BaseModel):
     latest_preview_url: Optional[str] = None
     latest_app_name: Optional[str] = None
     latest_app_title: Optional[str] = None
+    supabase_ref: Optional[str] = None          
     created_at: datetime
     updated_at: datetime
     

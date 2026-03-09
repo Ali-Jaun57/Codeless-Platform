@@ -37,6 +37,7 @@ class GenerateResponse(BaseModel):
     detected_class: Optional[str] = None
     confidence: Optional[str] = None
     conversation_id: Optional[int] = None
+    supabase_ref: Optional[str] = None
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
@@ -145,8 +146,12 @@ async def generate_project(
             merged_files = new_files
         
         preview_url = None
-        
-        # 11. 🖥️ LOCAL PREVIEW ENABLED
+
+        # 11a. Class B — get preview_url from deployer result
+        if detected_class == "Class B":
+            preview_url = result.get("preview_url")
+
+        # 11b. Class A — start local dev server
         if detected_class == "Class A" and merged_files:
             logger.info("🚀 Starting LOCAL development server for preview...")
             try:
@@ -178,7 +183,9 @@ async def generate_project(
                 "clarification_question": result.get("clarification_question")
             },
             project_name=result.get("project_name"),
-            app_title=result.get("app_title")
+            app_title=result.get("app_title"),
+            supabase_ref=result.get("supabase_ref"),
+            supabase_service_key=result.get("supabase_service_key"),
         )
         
         logger.success(f"✅ Generation complete: {len(merged_files)} files, preview: {preview_url}")
@@ -188,7 +195,8 @@ async def generate_project(
             files=merged_files,
             preview_url=preview_url,
             detected_class=detected_class,
-            conversation_id=assistant_message.get("id")
+            conversation_id=assistant_message.get("id"),
+            supabase_ref=result.get("supabase_ref"),
         )
         
     except asyncio.TimeoutError:

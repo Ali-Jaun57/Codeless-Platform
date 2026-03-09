@@ -1,6 +1,9 @@
 
 
 
+
+
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,7 +15,8 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MessageBubble from './MessageBubble';
 import VSCodeDisplay from '../CodeDisplay/VSCodeDisplay';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, X, Monitor, Code2, Cloud } from 'lucide-react';
+import CloudDashboard from '../CloudDashboard/CloudDashboard';
 import './ChatClient.css';
 
 type Message = {
@@ -44,6 +48,8 @@ export default function ChatClient({ projectId, project }: ChatClientProps) {
   const [generatedFiles, setGeneratedFiles] = useState<any[]>([]);
   const [showCodePanel, setShowCodePanel] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [supabaseRef, setSupabaseRef] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'preview' | 'code' | 'cloud'>('preview');
   
   // Conversation context
   const [conversationContext, setConversationContext] = useState<{
@@ -122,6 +128,16 @@ useEffect(() => {
           setGeneratedFiles(lastAssistantMsg.files);
           setPreviewUrl(lastAssistantMsg.preview_url || '');
           setShowCodePanel(true);
+        }
+
+        // Restore supabase_ref for Cloud tab (persists across page refreshes)
+        try {
+          const projData = await projectsApi.get(projectId);
+          if (projData?.supabase_ref) {
+            setSupabaseRef(projData.supabase_ref);
+          }
+        } catch {
+          // Non-fatal — Cloud tab simply won't appear for non-Class-B projects
         }
       } else {
         
@@ -259,6 +275,12 @@ if (data.type === 'clarification_needed') {
         setGeneratedFiles(data.files);
         setPreviewUrl(data.preview_url || '');
         setShowCodePanel(true);
+        // Class B apps return supabase_ref — this enables the Cloud tab
+        if (data.supabase_ref) {
+          setSupabaseRef(data.supabase_ref);
+        }
+        // Auto-switch to preview after generation
+        setActiveTab(previewUrl ? 'preview' : 'code');
         
         // Add success message
         const successMessage: Message = {
@@ -548,16 +570,104 @@ const handleClarificationAnswer = async (answer: string) => {
         </div>
       </div>
       
-      {/* Code Panel */}
+      {/* ── Right Panel: Preview | Code | ☁ Cloud ── */}
       {showCodePanel && generatedFiles.length > 0 && (
-        <VSCodeDisplay
-          files={generatedFiles}
-          previewUrl={previewUrl}
-          onExport={exportToGitHub}
-          onClose={closeCodePanel}
-          isFullScreen={false}
-          projectName={projectData?.name || 'Project'}
-        />
+        <div className="code-panel">
+
+          {/* ── Flat top tab bar using existing CSS classes ── */}
+          <div className="code-panel-tabs">
+            <button
+              className={`code-panel-tab ${activeTab === 'preview' ? 'active' : ''}`}
+              onClick={() => setActiveTab('preview')}
+              disabled={!previewUrl}
+              style={{ opacity: previewUrl ? 1 : 0.4, cursor: previewUrl ? 'pointer' : 'not-allowed' }}
+            >
+              <Monitor size={14} />
+              Preview
+            </button>
+
+            <button
+              className={`code-panel-tab ${activeTab === 'code' ? 'active' : ''}`}
+              onClick={() => setActiveTab('code')}
+            >
+              <Code2 size={14} />
+              Code
+            </button>
+
+            {supabaseRef && (
+              <button
+                className={`code-panel-tab ${activeTab === 'cloud' ? 'active' : ''}`}
+                onClick={() => setActiveTab('cloud')}
+                style={{ color: activeTab === 'cloud' ? '#a78bfa' : undefined }}
+              >
+                <Cloud size={14} style={{ color: '#a78bfa' }} />
+                Cloud
+              </button>
+            )}
+
+            {/* Close button pushed to the right */}
+            <button
+              onClick={closeCodePanel}
+              className="code-panel-tab"
+              style={{ marginLeft: 'auto', minWidth: 'unset', padding: '0 10px' }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+
+          {/* ── Tab content area ── */}
+          <div className="code-panel-content">
+
+            {/* Preview */}
+            {activeTab === 'preview' && (
+              <div className="preview-container">
+                {previewUrl ? (
+                  <iframe
+                    src={previewUrl}
+                    className="w-full h-full border-0"
+                    title="App Preview"
+                    sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"
+                  />
+                ) : (
+                  <div className="preview-placeholder">
+                    <Monitor className="preview-placeholder-icon" />
+                    <h3>Live Preview</h3>
+                    <p>No preview URL available. Deploy a Class B app to see a live preview.</p>
+                    <button
+                      className="code-panel-tab"
+                      style={{ marginTop: 16 }}
+                      onClick={() => setActiveTab('code')}
+                    >
+                      <Code2 size={14} /> Switch to Code
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Code — VSCodeDisplay in codeOnly mode (no inner tabs) */}
+            {activeTab === 'code' && (
+              <VSCodeDisplay
+                files={generatedFiles}
+                onExport={exportToGitHub}
+                onClose={closeCodePanel}
+                projectName={projectData?.name || 'Project'}
+                codeOnly={true}
+              />
+            )}
+
+            {/* Cloud — only for Class B deployed apps */}
+            {activeTab === 'cloud' && supabaseRef && (
+              <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <CloudDashboard
+                  projectId={projectId}
+                  supabaseRef={supabaseRef}
+                />
+              </div>
+            )}
+
+          </div>
+        </div>
       )}
     </div>
   );

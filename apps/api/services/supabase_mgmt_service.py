@@ -126,7 +126,9 @@ class SupabaseManagementService:
                     logger.debug(f"Raw keys response: {keys_data}")
 
                 anon_key = next((k["api_key"] for k in keys_data if k["name"] == "anon"), None)
+                logger.debug(f"Attempt {attempt+1}: anon_key {'found' if anon_key else 'missing'}")
                 service_key = next((k["api_key"] for k in keys_data if k["name"] == "service_role"), None)
+                logger.debug(f"Attempt {attempt+1}: service_key {'found' if service_key else 'missing'}")
 
                 missing = []
                 if not anon_key:

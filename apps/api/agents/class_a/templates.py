@@ -1,4 +1,6 @@
-# apps/api/agents/templates.py
+
+
+
 """
 Template files for Class A React apps
 """

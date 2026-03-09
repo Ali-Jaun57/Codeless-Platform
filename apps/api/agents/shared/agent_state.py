@@ -1,54 +1,4 @@
 
-# from pydantic import BaseModel
-# from typing import List, Dict, Any, Optional
-# from langchain_core.messages import HumanMessage, AIMessage
-
-# class AgentState(BaseModel):
-#     messages: List = []
-#     files: List[Dict[str, Any]] = []
-#     iteration: int = 0
-#     max_iterations: int = 3
-#     approved: bool = False
-#     detected_class: Optional[str] = None
-#     confidence: Optional[str] = None
-#     needs_clarification: bool = False
-#     clarification_question: Optional[str] = None
-#     app_requirements: Optional[str] = None
-
-#     # Enhancement mode
-#     existing_files: List[Dict[str, Any]] = []
-#     is_enhancement: bool = False
-
-#     # New fields for validation
-#     app_folder: Optional[str] = None          # Path where the built app is stored
-#     runtime_error: Optional[str] = None       # Runtime error captured by validator
-
-#     def add_message(self, message):
-#         self.messages.append(message)
-
-#     def update_files(self, files):
-#         self.files = files
-
-#     def increment_iteration(self):
-#         self.iteration += 1
-
-#     def set_approved(self, approved: bool):
-#         self.approved = approved
-
-#     def set_classification(self, classification: dict):
-#         self.detected_class = classification.get("class")
-#         self.confidence = classification.get("confidence")
-#         self.needs_clarification = classification.get("needs_clarification", False)
-#         self.clarification_question = classification.get("clarification_question")
-#         self.app_requirements = classification.get("app_requirements")
-
-#     def is_complete(self) -> bool:
-#         return (self.iteration >= self.max_iterations or
-#                 (self.approved and len(self.files) > 0) or
-#                 (self.iteration > 0 and len(self.files) == 0))
-
-
-
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from langchain_core.messages import HumanMessage, AIMessage
@@ -85,6 +35,8 @@ class AgentState(BaseModel):
     preview_url: Optional[str] = None
     github_repo_url: Optional[str] = None
     netlify_site_name: Optional[str] = None
+    supabase_anon_key: Optional[str] = None      # ← ADD THIS
+    supabase_service_key: Optional[str] = None 
 
     def add_message(self, message):
         self.messages.append(message)

@@ -1,3 +1,6 @@
+
+
+
 # -------------------------------------------------------------------------------
 # CHAT-GPT PLANNER AGENT
 # -------------------------------------------------------------------------------
@@ -8,8 +11,6 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage
 from utils.logger import Logger
 from utils.json_parser import extract_json_from_text
-# from .agent_state import AgentState
-# from .templates import FOLDER_STRUCTURE, EXAMPLE_OUTPUT
 from ..shared.agent_state import AgentState
 from .templates import FOLDER_STRUCTURE, EXAMPLE_OUTPUT
 
