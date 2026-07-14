@@ -1,4 +1,6 @@
 
+
+
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from langchain_core.messages import HumanMessage, AIMessage
@@ -19,11 +21,12 @@ class AgentState(BaseModel):
     existing_files: List[Dict[str, Any]] = []
     is_enhancement: bool = False
 
-    # New fields for validation
+    # Validation
     app_folder: Optional[str] = None
-    runtime_error: Optional[str] = None
+    runtime_error: Optional[str] = None  # validator: "dist not found", etc.
+    build_error: Optional[str] = None    # builder: raw compiler stderr ← NEW
 
-    # Class B specific fields (add these)
+    # Class B specific fields
     project_name: Optional[str] = None
     app_title: Optional[str] = None
     app_description: Optional[str] = None
@@ -35,8 +38,8 @@ class AgentState(BaseModel):
     preview_url: Optional[str] = None
     github_repo_url: Optional[str] = None
     netlify_site_name: Optional[str] = None
-    supabase_anon_key: Optional[str] = None      # ← ADD THIS
-    supabase_service_key: Optional[str] = None 
+    supabase_anon_key: Optional[str] = None
+    supabase_service_key: Optional[str] = None
 
     def add_message(self, message):
         self.messages.append(message)

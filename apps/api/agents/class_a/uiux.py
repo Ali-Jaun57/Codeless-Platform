@@ -42,7 +42,25 @@ class UIUXAgent:
         prompt = self._create_prompt(files_for_prompt)
 
         logger.debug("Calling Claude Opus for UI/UX enhancement...")
-        response = self.llm.invoke(state.messages + [HumanMessage(content=prompt)])
+        # response = self.llm.invoke(state.messages + [HumanMessage(content=prompt)])
+        # Sanitize messages — strip OpenAI reasoning blocks before sending to Claude
+        clean_messages = []
+        for msg in state.messages:
+            if isinstance(msg, AIMessage) and isinstance(msg.content, list):
+                # Extract only text blocks, discard reasoning/thinking blocks
+                text_only = " ".join(
+                    block.get("text", "")
+                    for block in msg.content
+                    if isinstance(block, dict) and block.get("type") == "text"
+                ).strip()
+                if text_only:
+                    clean_messages.append(AIMessage(content=text_only))
+                # If no text found, skip the message entirely
+            else:
+                clean_messages.append(msg)
+
+        response = self.llm.invoke(clean_messages + [HumanMessage(content=prompt)])
+
         logger.success("✅ UI/UX enhancement response received")
 
         enhanced_files = self._parse_response(response.content)

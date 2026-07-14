@@ -74,6 +74,7 @@ class Coder:
             logger.error(f"❌ Coder failed: {str(e)}")
             raise
 
+
     def _build_conversation_history(self, messages: list) -> str:
         lines = ["\nCONVERSATION HISTORY:"]
         for msg in messages:
@@ -81,6 +82,12 @@ class Coder:
                 lines.append(f"user: {msg.content}")
             elif isinstance(msg, AIMessage):
                 content = msg.content
+                # content can be a list of blocks from reasoning models
+                if isinstance(content, list):
+                    content = next(
+                        (block.get("text", "") for block in content if isinstance(block, dict) and block.get("type") == "text"),
+                        str(content)
+                    )
                 if len(content) > 500:
                     content = content[:500] + "..."
                 lines.append(f"assistant: {content}")
@@ -180,8 +187,22 @@ When modifying existing files, use the provided current content as a base and ap
 
 NOW OUTPUT ONLY THE JSON:"""
 
-    def _parse_code_response(self, raw_content: str) -> list:
+    def _parse_code_response(self, raw_content) -> list:
         try:
+            # Handle reasoning models that return a list of content blocks
+            # e.g. [{'type': 'reasoning', ...}, {'type': 'text', 'text': '{...}'}]
+            if isinstance(raw_content, list):
+                text_content = ""
+                for block in raw_content:
+                    if isinstance(block, dict) and block.get("type") == "text":
+                        text_content = block.get("text", "")
+                        break
+                raw_content = text_content
+
+            if not raw_content:
+                logger.error("No text content found in response")
+                return []
+
             data = extract_json_from_text(raw_content)
             generated_files = data.get("files", [])
 

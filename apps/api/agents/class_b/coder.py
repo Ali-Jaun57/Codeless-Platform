@@ -1,12 +1,3 @@
-
-
-
-
-
-
-
-
-
 import json
 import re
 from langchain_openai import ChatOpenAI
@@ -229,6 +220,49 @@ CRITICAL RULES (FOLLOW STRICTLY – VIOLATIONS WILL BREAK THE BUILD):
     - Include `CREATE TABLE` statements, `ENABLE ROW LEVEL SECURITY`, and `CREATE POLICY` statements.
     - Use `gen_random_uuid()` for primary keys, and `auth.uid()` in policies.
 12. **CRITICAL: Each file object must contain EXACTLY two keys: `path` and `content`. Do not add any extra keys (e.g., `timestamp`, `id`).**
+13. CRITICAL RLS RULE — every SELECT policy MUST reference auth.uid() 
+   directly or through a subquery. Never write a USING clause that only 
+   checks column values without auth.uid().
+14. CRITICAL INSERT RULE — every insert to a table with user_id or owner_id 
+   MUST explicitly include that column using the current user's ID from 
+   supabase.auth.getUser(). Never rely on triggers or defaults.
+15. Always generate exactly ONE migration file at 
+    supabase/migrations/20240101000000_init.sql containing all tables 
+    and RLS policies in dependency order.
+
+CRITICAL MIGRATION RULES:
+- Always generate migration files with timestamps in strict dependency order.
+- File that creates tables MUST have an earlier timestamp than files that reference those tables.
+- NEVER reference a table in a migration file that is created in a later migration file.
+- Correct order: 
+    1. Create all base tables (no foreign keys to other new tables)
+    2. Create tables with foreign keys to tables from step 1
+    3. Create junction/member tables
+    4. Create ALL RLS policies in ONE final migration file
+- Always generate exactly ONE migration file containing ALL tables, indexes, 
+  and RLS policies in the correct dependency order.
+- Never split migrations across multiple files.
+- File name: supabase/migrations/20240101000000_init.sql
+
+
+CRITICAL RLS RULE — applies to ALL tables:
+- Every SELECT policy MUST scope rows to the current user in some way.
+- A SELECT policy that can return rows belonging to OTHER users is always wrong.
+- Every USING clause must reference auth.uid() either directly or through 
+  a subquery that traces back to auth.uid().
+- Never write a USING clause that only checks column values without 
+  any reference to auth.uid() — that gives all authenticated users 
+  access to all rows.
+
+
+### CRITICAL AUTH-BOUND & TRANSACTION EXECUTION RULES
+When writing application logic, components, or API routers that interact with a relational database schema, follow these execution protocols strictly:
+1. Unified Auth Bindings: When submitting insertion payloads for data objects created by a user, never leave the user reference blank or assumed. Programmatically inject the active authenticated user's ID from your auth session hook directly into the insertion payload.
+2. Sequential Multi-Table Transactions: When the schema plan demands a child relationship record immediately upon parent creation (e.g., creating a workspace requires adding the creator to a membership tracker), you must write the creation handler as an atomic multi-step sequence:
+   - Step A: Fire the parent row insertion.
+   - Step B: Wait for the database response and safely capture the newly returned row ID (UUID).
+   - Step C: Use that fresh parent UUID alongside the active user's ID to instantly fire the secondary child row insertion.
+3. Strict UI Error Boundaries: Wrap all multi-table submission fetch chains in rigorous try/catch blocks. If a constraint or validation error fails, catch the message and visually present it via an error alert or feedback toast instead of breaking the execution thread silently.
 
 
 NOW OUTPUT ONLY THE JSON:

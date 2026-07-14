@@ -1,21 +1,23 @@
 
 
+
 import json
+import re
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage
 from utils.logger import Logger
 from utils.json_parser import extract_json_from_text
 from ..shared.agent_state import AgentState
+
 try:
     import json5
     HAS_JSON5 = True
 except ImportError:
     HAS_JSON5 = False
     json5 = None
-import re
-
 
 logger = Logger(__name__)
+
 
 class Critic:
     def __init__(self, llm: ChatOpenAI):
@@ -32,30 +34,27 @@ class Critic:
                     "messages": state.messages,
                     "iteration": state.iteration + 1,
                     "files": state.files,
-                    "approved": True
+                    "approved": True,
                 }
 
-            # Build plan summary (useful for context)
             plan_summary = f"""
 PROJECT: {state.project_name or 'Unknown'}
-DATABASE SCHEMA: {json.dumps(state.database, indent=2) if hasattr(state, 'database') and state.database else "{}"}
-AUTH CONFIG: {json.dumps(state.auth, indent=2) if hasattr(state, 'auth') and state.auth else "{}"}
-PAGES: {json.dumps(state.pages, indent=2) if hasattr(state, 'pages') and state.pages else "[]"}
-COMPONENTS: {json.dumps(state.components, indent=2) if hasattr(state, 'components') and state.components else "[]"}
+DATABASE SCHEMA: {json.dumps(state.database_schema, indent=2) if state.database_schema else "{}"}
+AUTH CONFIG: {json.dumps(state.auth_config, indent=2) if state.auth_config else "{}"}
+PAGES: {json.dumps(state.pages, indent=2) if state.pages else "[]"}
+COMPONENTS: {json.dumps(state.components, indent=2) if state.components else "[]"}
 """
 
-            # Prepare files for review (truncate very large files)
-            files_to_review = []
-            for f in state.files:
-                files_to_review.append({
-                    "path": f.get("path", ""),
-                    "content": f.get("content", "")[:20000]  # truncate to avoid huge prompts
-                })
+            files_to_review = [
+                {"path": f.get("path", ""), "content": f.get("content", "")[:20000]}
+                for f in state.files
+            ]
 
             prompt = self._create_critique_prompt(
                 plan_summary=plan_summary,
                 files=files_to_review,
-                runtime_error=state.runtime_error
+                build_error=state.build_error,      # ← raw compiler stderr
+                runtime_error=state.runtime_error,  # ← validator-level error
             )
 
             logger.debug("Calling LLM for Class B critique...")
@@ -65,130 +64,107 @@ COMPONENTS: {json.dumps(state.components, indent=2) if hasattr(state, 'component
 
             critique_data = self._parse_critique_response(response.content)
             approved = critique_data.get("approved", False)
-
             logger.info(f"Critique result: Approved = {approved}")
 
             new_state = {
                 "messages": state.messages + [AIMessage(content=response.content)],
                 "iteration": state.iteration + 1,
                 "files": state.files,
-                "approved": approved
+                "approved": approved,
             }
-
             logger.step("Critic", "completed")
             return new_state
 
         except Exception as e:
             logger.error(f"❌ Critic failed: {str(e)}")
-            # Fail safe: approve to avoid infinite loops
             return {
                 "messages": state.messages,
                 "iteration": state.iteration + 1,
                 "files": state.files,
-                "approved": True
+                "approved": True,  # fail-safe to avoid infinite loop
             }
 
-    # -------------------------------------------------------
+    # ------------------------------------------------------------------
+    # Prompt
+    # ------------------------------------------------------------------
 
-#     def _create_critique_prompt(self, plan_summary: str, files: list, runtime_error: str = None) -> str:
-#         files_json = json.dumps(files, indent=2)
-#         runtime_section = f"\nRUNTIME ERROR DETECTED:\n{runtime_error}\n" if runtime_error else ""
-
-#         return f"""YOU ARE A CODE CRITIC FOR FULL‑STACK REACT + SUPABASE APPLICATIONS. YOU MUST OUTPUT ONLY PURE JSON.
-
-# PLAN:
-# {plan_summary}
-
-# {runtime_section}
-
-# REVIEW THESE FILES:
-# {files_json}
-
-# CRITICAL RULES:
-# 1. Output MUST be valid JSON parsable by json.loads()
-# 2. NO markdown code blocks (no ```json or ```)
-# 3. NO explanations, comments, or extra text
-# 4. JSON structure MUST be exactly: {{"critique": "brief feedback", "approved": true/false, "improvements": ["suggestion1", "suggestion2"]}}
-# 5. "approved" MUST be boolean (true/false)
-# 6. **Be strict: Reject any code that contains placeholder comments (e.g., `// Logic to ...`, `TODO`, `FIXME`).**
-# 7. **Check that every function call refers to a defined function (look for `functionName(`) and ensure that function is either imported or defined in the file.**
-# 8. **Flag any missing imports or references to undefined variables.**
-# 9. **If a runtime error is provided above, set `approved: false` and include a suggestion to fix that specific error.**
-
-# APPROVAL GUIDELINES (Class B specific):
-# - Approve (true) if:
-#   - Database schema matches the plan (tables, columns, RLS policies present)
-#   - RLS policies correctly use `auth.uid()` and are scoped per user
-#   - Authentication pages correctly call Supabase auth methods (`signInWithPassword`, `signUp`)
-#   - Protected routes redirect unauthenticated users (e.g., using `Navigate` or a guard)
-#   - All environment variables are used (`import.meta.env.VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
-#   - No hardcoded secrets (like service role keys) appear in frontend code
-#   - The app builds without errors (as indicated by runtime_error being None)
-#   - SQL migration files are valid and include necessary policies
-# - Reject (false) if any of the above are missing, or if runtime_error is present.
-
-# EXAMPLE CORRECT OUTPUT:
-# {{"critique": "Database schema and RLS are correct, but the auth form lacks error handling.", "approved": false, "improvements": ["Add error display in AuthForm", "Wrap supabase calls in try/catch"]}}
-
-# NOW OUTPUT THE JSON:
-# """
-
-    def _create_critique_prompt(self, plan_summary: str, files: list, runtime_error: str = None) -> str:
+    def _create_critique_prompt(
+        self,
+        plan_summary: str,
+        files: list,
+        build_error: str = None,
+        runtime_error: str = None,
+    ) -> str:
         files_json = json.dumps(files, indent=2)
-        runtime_section = f"\nRUNTIME ERROR DETECTED:\n{runtime_error}\n" if runtime_error else ""
 
-        return f"""YOU ARE A CODE CRITIC FOR FULL‑STACK REACT + SUPABASE APPLICATIONS. YOU MUST OUTPUT ONLY PURE JSON.
+        # ── Build error section (highest priority — exact compiler output) ──
+        if build_error:
+            error_section = f"""
+╔══════════════════════════════════════════════════════════╗
+║              BUILD FAILED — COMPILER OUTPUT              ║
+╚══════════════════════════════════════════════════════════╝
+{build_error}
 
-    PLAN:
-    {plan_summary}
+This is the EXACT error from the compiler/bundler. Read it literally.
+Do NOT speculate about other possible causes — fix exactly what the error says.
+"""
+        elif runtime_error:
+            error_section = f"""
+RUNTIME / VALIDATION ERROR:
+{runtime_error}
+"""
+        else:
+            error_section = ""
 
-    {runtime_section}
+        return f"""YOU ARE A CODE CRITIC FOR FULL-STACK REACT + SUPABASE APPLICATIONS. OUTPUT ONLY PURE JSON.
 
-    REVIEW THESE FILES:
-    {files_json} 
+PLAN:
+{plan_summary}
 
-    CRITICAL RULES:
-    1. Output MUST be valid JSON: {{"critique": "brief feedback", "approved": true/false, "improvements": ["suggestion1", ...]}}
-    2. NO markdown, NO extra text.
-    3. **Reject only if:**
-    - The app fails to build (runtime_error is present).
-    - There are missing RLS policies or hardcoded secrets.
-    - Authentication or protected routes do not work.
-    - The app would crash on startup (e.g., missing QueryClientProvider).
-    - There are placeholder comments like `// Logic to ...`, `TODO`, `FIXME`.
-    - There are function calls to undefined functions (e.g., `someFunction(` with no definition or import).
-    - There are missing imports for used functions or variables.
-    - The database schema is missing tables, columns, or RLS policies defined in the plan.
-    - Authentication pages do not call Supabase auth methods correctly.
-    - Error in apps functionality that user it not getting the functionality it wants. 
-    4. **Do NOT reject for**:
-    - Placeholder comments that don't affect runtime.
-    - Unused dependencies or README inaccuracies.
-    - Minor TypeScript config mismatches.
-    - Missing indexes or performance optimizations.
-    5. If the app builds and core features work, **approve (true)**.
+{error_section}
 
-    EXAMPLE CORRECT OUTPUT:
-    {{"critique": "App builds and works, but README mentions Storage which isn't used.", "approved": true, "improvements": ["Remove Storage from README"]}}
+REVIEW THESE FILES:
+{files_json}
 
-    NOW OUTPUT THE JSON:
-    """
-    # def _parse_critique_response(self, raw_content: str) -> dict:
-    #     try:
-    #         critique_data = extract_json_from_text(raw_content)
-    #         if "approved" in critique_data:
-    #             critique_data["approved"] = bool(critique_data["approved"])
-    #         return critique_data
-    #     except Exception as e:
-    #         logger.error(f"Critique parsing error: {str(e)}")
-    #         return {"critique": "Parse error", "approved": True, "improvements": []}
+CRITICAL RULES:
+1. Output MUST be valid JSON: {{"critique": "...", "approved": true/false, "improvements": ["..."]}}
+2. NO markdown, NO extra text outside the JSON.
+3. If a BUILD ERROR is shown above, you MUST:
+   - Set approved: false.
+   - Read the compiler error literally — file path, line number, exact message.
+   - Identify the exact file and line that must change.
+   - Give one precise fix as the first improvement (e.g. "rename useAuth.ts → useAuth.tsx because it contains JSX").
+   - Do NOT invent alternative theories.
+4. Reject ONLY if:
+   - A build error or runtime error is present (see above).
+   - RLS policies are missing or hardcoded secrets appear in frontend code.
+   - Auth pages do not call Supabase auth methods correctly.
+   - Placeholder comments like `// TODO`, `// FIXME`, `// Logic to ...` are present.
+   - Function calls reference undefined functions.
+   - If improvemnets sections has improvemnets that if not implemented would break the app or cause runtime errors or cause any feature not to work.
+   - Any SELECT policy USING clause does not reference auth.uid() directly 
+     or through a subquery — this means all authenticated users can read 
+     all rows which is a critical security violation.
+    - Any insert statement for a table with user_id or owner_id column is 
+    missing that column in the payload.
+5. Do NOT reject for:
+   - Minor TypeScript config mismatches.
+   - Unused dependencies or README inaccuracies.
+   - Missing indexes or performance hints.
+   - Security improvements that are nice-to-have but do not cause data leakage 
+     or broken features (e.g. adding search_path to functions, REVOKE from PUBLIC).
+6. If the app builds and core features work: approve (true).
+
+EXAMPLE — correct output when a build error is present:
+{{"critique": "Build fails: useAuth.ts contains JSX but must be .tsx for esbuild to parse it.", "approved": false, "improvements": ["Rename src/hooks/useAuth.ts to src/hooks/useAuth.tsx and update all import statements that reference it."]}}
+
+NOW OUTPUT THE JSON:"""
+
+    # ------------------------------------------------------------------
+    # Response parsing
+    # ------------------------------------------------------------------
 
     def _parse_critique_response(self, raw_content: str) -> dict:
-        """
-        Extract JSON from the LLM response using a greedy regex,
-        then parse with json (fallback to json5).
-        """
-        # Use greedy match to capture the complete JSON object
         match = re.search(r'({[\s\S]*})', raw_content, re.DOTALL)
         if not match:
             logger.error("No JSON object found in critique response")
@@ -196,7 +172,6 @@ COMPONENTS: {json.dumps(state.components, indent=2) if hasattr(state, 'component
 
         json_str = match.group(1)
 
-        # Try standard JSON parsing
         try:
             data = json.loads(json_str)
         except json.JSONDecodeError as e:
@@ -208,18 +183,12 @@ COMPONENTS: {json.dumps(state.components, indent=2) if hasattr(state, 'component
                     logger.error(f"json5 also failed: {e2}")
                     return {"critique": "Parse error", "approved": True, "improvements": []}
             else:
-                logger.error("json5 not installed. Please install with `pip install json5`.")
+                logger.error("json5 not installed.")
                 return {"critique": "Parse error", "approved": True, "improvements": []}
 
-        # Ensure required keys exist with correct types
-        if "approved" in data:
-            data["approved"] = bool(data["approved"])
-        else:
-            data["approved"] = True
-
+        data["approved"] = bool(data.get("approved", True))
         if "critique" not in data:
             data["critique"] = "No critique provided"
-
         if "improvements" not in data or not isinstance(data["improvements"], list):
             data["improvements"] = []
 

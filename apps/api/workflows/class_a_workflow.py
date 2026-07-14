@@ -162,11 +162,7 @@ class CodeGenerationWorkflow:
         workflow.add_edge("builder", "validator")
         workflow.add_edge("validator", "critic")
 
-        # workflow.add_conditional_edges(
-        #     "critic",
-        #     self._should_continue,
-        #     {END: END, "coder": "coder"}
-        # )
+
 
         workflow.add_conditional_edges(
             "critic",

@@ -1,8 +1,5 @@
 
 
-
-
-
 import os
 import shutil
 import asyncio
@@ -19,29 +16,40 @@ class Validator:
     def __call__(self, state: AgentState) -> dict:
         logger.step("Validator", "started")
 
+        # ----------------------------------------------------------------
+        # If the builder already captured a compiler error, short-circuit:
+        # no point checking for dist — we know it failed and we have the
+        # real error message to forward to the critic.
+        # ----------------------------------------------------------------
+        if state.build_error:
+            logger.error(f"Build error detected, skipping dist check: {state.build_error[:200]}")
+            logger.step("Validator", "completed (build failed)")
+            return {
+                "messages": state.messages,
+                "runtime_error": state.build_error,   # real compiler stderr
+            }
+
         if not state.app_folder:
             logger.warning("No app folder available for validation")
             return {
                 "messages": state.messages,
-                "runtime_error": None
+                "runtime_error": None,
             }
 
         # Ensure .env file exists with dummy values for validation
         env_path = os.path.join(state.app_folder, ".env")
         if not os.path.exists(env_path):
-            # Copy from .env.example if available
             example_path = os.path.join(state.app_folder, ".env.example")
             if os.path.exists(example_path):
                 shutil.copy(example_path, env_path)
                 logger.info("Created .env from .env.example for validation")
             else:
-                # Create minimal dummy .env
                 with open(env_path, "w") as f:
                     f.write("VITE_SUPABASE_URL=https://dummy.supabase.co\n")
                     f.write("VITE_SUPABASE_ANON_KEY=dummy-key\n")
                 logger.info("Created dummy .env file for validation")
 
-        # Run validation service
+        # Run validation service (checks dist folder exists, etc.)
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -58,7 +66,7 @@ class Validator:
 
         new_state = {
             "messages": state.messages,
-            "runtime_error": error_str
+            "runtime_error": error_str,
         }
         logger.step("Validator", "completed")
         return new_state

@@ -173,5 +173,37 @@ class SupabaseManagementService:
                 logger.error(f"Response status: {e.response.status_code}")
                 logger.error(f"Response body: {e.response.text}")
             return False
+        
+    def apply_migrations_list(self, project_ref: str, sql_list: list) -> bool:
+        """
+        Run each migration SQL file as a separate query in order.
+        This avoids the 'relation does not exist' error that occurs when
+        multiple migration files are joined and run as a single query —
+        Postgres cannot reference tables created earlier in the same batch.
+        """
+        url = f"{self.base_url}/projects/{project_ref}/database/query"
+        headers = {
+            "Authorization": f"Bearer {self.access_token}",
+            "Content-Type": "application/json"
+        }
+
+        for i, sql in enumerate(sql_list):
+            try:
+                resp = requests.post(
+                    url,
+                    json={"query": sql},
+                    headers=headers,
+                    timeout=60
+                )
+                resp.raise_for_status()
+                logger.success(f"✅ Migration {i + 1}/{len(sql_list)} applied to {project_ref}")
+            except Exception as e:
+                logger.error(f"❌ Migration {i + 1}/{len(sql_list)} failed: {str(e)}")
+                if hasattr(e, 'response') and e.response is not None:
+                    logger.error(f"Response status: {e.response.status_code}")
+                    logger.error(f"Response body: {e.response.text}")
+                return False
+
+        return True
 # Singleton instance
 supabase_mgmt = SupabaseManagementService()

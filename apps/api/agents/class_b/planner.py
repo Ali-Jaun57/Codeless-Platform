@@ -175,6 +175,11 @@ SECURITY RULES:
 - No bypassing RLS
 - No external APIs other than Supabase
 
+### CRITICAL RELATION-MAPPING MANDATE
+When planning databases for Class B apps, you must enforce relational data-integrity benchmarks in your JSON schema design:
+1. Explicit Ownership Tracking: Every user-generated parent entity (e.g., workspaces, projects, organizations, items) must include an explicit owner column (e.g., `owner_id` or `user_id`) linked directly to `auth.users.id`.
+2. Implicit Workspace Junction Tables: If an app requires collaborative spaces, teams, or varying roles (editors/viewers), you must automatically architect an explicit helper junction table (e.g., `workspace_members`) to store memberships, foreign keys linking to the parent table, and text role scopes.
+
 {conversation_history}
 """
 

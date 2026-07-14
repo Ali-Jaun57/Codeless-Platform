@@ -97,11 +97,12 @@ React / Next.js UI
 -Protected routes
 
 🧩 Tech
--NextAuth / Auth.js
--Prisma
--PostgreSQL / SQLite
--API routes
--Server actions
+- Supabase Auth (email/password)
+- Supabase PostgreSQL
+- Row Level Security (RLS)
+- React + Vite + TypeScript
+- react-router-dom
+- Deployed to Netlify
 
 📦 Output
 -Full-stack app
